@@ -30,8 +30,8 @@ For a home-local plugin, treat `<home>` as the root and use:
 
 ```bash
 python3 .agents/skills/plugin-creator/scripts/create_basic_plugin.py my-plugin \
-  --path ~/plugins \
-  --marketplace-path ~/.agents/plugins/marketplace.json \
+  --path ./plugins \
+  --marketplace-path ./.agents/plugins/marketplace.json \
   --with-marketplace
 ```
 
@@ -42,7 +42,7 @@ python3 .agents/skills/plugin-creator/scripts/create_basic_plugin.py my-plugin -
   --with-skills --with-hooks --with-scripts --with-assets --with-mcp --with-apps --with-marketplace
 ```
 
-`<parent-plugin-directory>` is the directory where the plugin folder `<plugin-name>` will be created (for example `~/code/plugins`).
+`<parent-plugin-directory>` is the directory where the plugin folder `<plugin-name>` will be created (for example `./plugins`).
 
 ## What this skill creates
 
@@ -69,7 +69,7 @@ python3 .agents/skills/plugin-creator/scripts/create_basic_plugin.py my-plugin -
 
 - `marketplace.json` always lives at `<repo-root>/.agents/plugins/marketplace.json`.
 - For a home-local plugin, use the same convention with `<home>` as the root:
-  `~/.agents/plugins/marketplace.json` plus `./plugins/<plugin-name>`.
+  `./.agents/plugins/marketplace.json` plus `./plugins/<plugin-name>`.
 - Marketplace root metadata supports top-level `name` plus optional `interface.displayName`.
 - Treat plugin order in `plugins[]` as render order in Codex. Append new entries unless a user explicitly asks to reorder the list.
 - `displayName` belongs inside the marketplace `interface` object, not individual `plugins[]` entries.

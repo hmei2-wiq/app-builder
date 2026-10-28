@@ -41,7 +41,7 @@ CURRENT_REVISION=$(gcloud run revisions list \
 #   --cluster $CLUSTER --services $SERVICE \
 #   --query 'services[0].taskDefinition' --output text)
 
-echo "ROLLBACK_TARGET=$CURRENT_REVISION" > /tmp/rollback-target.env
+echo "ROLLBACK_TARGET=$CURRENT_REVISION" > ./state/rollback-target.env
 echo "Pre-deploy snapshot: $CURRENT_REVISION"
 ```
 
@@ -119,7 +119,7 @@ Create `.buildkite/scripts/rollback.sh`:
 #!/bin/bash
 set -euo pipefail
 
-source /tmp/rollback-target.env 2>/dev/null || true
+source ./state/rollback-target.env 2>/dev/null || true
 
 if [ -z "${ROLLBACK_TARGET:-}" ] || [ "$ROLLBACK_TARGET" = "none" ]; then
   echo "ERROR: No rollback target available. Manual intervention required."
@@ -231,7 +231,7 @@ graph TD
 1. Check deployment logs in Buildkite
 2. Check application logs: `gcloud logging read ...` / `aws logs ...`
 3. Check /api/health/ready for dependency failures
-4. If database migration caused the issue: see migration rollback in docs/04-dev-plan.md
+4. If database migration caused the issue: use the rollback SQL documented at the top of the migration file (see `db-migrator`); the `[db]` tasks in `openspec/changes/<change>/tasks.md` name which migrations the change introduced
 ```
 
 ## Git Commit & Push

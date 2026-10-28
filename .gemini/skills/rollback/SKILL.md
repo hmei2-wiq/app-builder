@@ -40,7 +40,7 @@ CURRENT_REVISION=$(gcloud run revisions list \
 #   --cluster $CLUSTER --services $SERVICE \
 #   --query 'services[0].taskDefinition' --output text)
 
-echo "ROLLBACK_TARGET=$CURRENT_REVISION" > /tmp/rollback-target.env
+echo "ROLLBACK_TARGET=$CURRENT_REVISION" > ./state/rollback-target.env
 echo "Pre-deploy snapshot: $CURRENT_REVISION"
 ```
 
@@ -118,7 +118,7 @@ Create `.buildkite/scripts/rollback.sh`:
 #!/bin/bash
 set -euo pipefail
 
-source /tmp/rollback-target.env 2>/dev/null || true
+source ./state/rollback-target.env 2>/dev/null || true
 
 if [ -z "${ROLLBACK_TARGET:-}" ] || [ "$ROLLBACK_TARGET" = "none" ]; then
   echo "ERROR: No rollback target available. Manual intervention required."

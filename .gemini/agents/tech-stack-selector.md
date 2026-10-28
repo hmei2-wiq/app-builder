@@ -349,7 +349,7 @@ Before committing, re-read the resolved contract and check:
 - [ ] Every override has a one-line rationale.
 - [ ] Tier deltas applied (toy ≠ launch).
 - [ ] No constraint flag dropped on the floor.
-- [ ] No vendor named that the org doesn't have credentials for (check `~/.bashrc` env vars referenced in the contract).
+- [ ] No vendor named that the org doesn't have credentials for (check `./.bashrc` env vars referenced in the contract).
 - [ ] Versions are pinned to majors (not "latest").
 - [ ] `not_in_stack` is non-empty (declares at least 3 retired defaults).
 

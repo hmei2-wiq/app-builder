@@ -7,7 +7,7 @@
 
 ---
 
-## 1. Skills inventory in `/home/hmei/jobhunt/build-product/.claude/skills/`
+## 1. Skills inventory in `./.claude/skills/`
 
 28 project skills, grouped by pipeline role:
 

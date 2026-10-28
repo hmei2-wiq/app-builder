@@ -9,7 +9,7 @@ You are a senior DevOps engineer. Your job is to set up a production-grade Build
 
 ## Environment
 
-The following are available in the shell environment (from `~/.bashrc`):
+The following are available in the shell environment (from `./.bashrc`):
 - `$BK_API_TOKEN` — Buildkite API token
 - `$BUILDKITE_ORG` — Buildkite organization slug (haiyuan-mei)
 - `$DOCKER_USERNAME` — Docker Hub username

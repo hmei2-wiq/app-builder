@@ -32,6 +32,8 @@ the whole point.
 Required:
 - `docs/01c-wedge.md` — wedge sentence, ICP, kill switches
 - `docs/01b-product-spec.md` — KPI targets
+- `openspec/specs/**` — current requirements (`openspec list --specs --json`);
+  conventions in `.claude/skills/build-product-v2/openspec-conventions.md`
 - A deployed product with at least one real signal source wired
 
 Recommended:
@@ -216,11 +218,39 @@ project.
 
 ## Phase 6 — Plan & Implement
 
-Append the one-change task to `docs/04-dev-plan.md` tagged
-`[Iteration N — signal-driven]`.
+The one change is one OpenSpec change, `iter-<N>-signal-<slug>`:
+
+```bash
+export OPENSPEC_TELEMETRY=0 DO_NOT_TRACK=1 OPENSPEC_NO_UPDATE_CHECK=1
+OPENSPEC="npx --yes @fission-ai/openspec@1.15.0"
+CHANGE="iter-<N>-signal-<slug>"
+$OPENSPEC new change "$CHANGE"
+scripts/state-set.sh '.active_change' "\"$CHANGE\""
+```
+
+- **`proposal.md`** — Why = the leaking funnel step and its numbers;
+  What Changes = the one change; then the Predicted lift, Success
+  metric and Kill criterion copied from `the-one-change.md`.
+- **`specs/<capability>/spec.md`** — the behaviour change as ADDED or
+  MODIFIED requirements (`Source: iter-N signal`). A pure copy or
+  layout tweak with no behaviour change sets `skip_specs: true` in the
+  change's `.openspec.yaml` instead.
+- **`tasks.md`** — the implementation task(s) plus the Phase 7
+  instrumentation task (`[frontend]`/`[backend]` → `implements:` IDs).
+- `$OPENSPEC validate "$CHANGE" --strict --no-interactive` must pass.
 
 Spawn the implementer (`backend-developer` or `frontend-developer`
-depending on the change). Run quality gates and `dogfood` after.
+depending on the change) against the change's tasks. Run quality gates
+(including `spec-validate` and `traceability`) and `dogfood` after.
+When green and deployed:
+
+```bash
+$OPENSPEC archive "$CHANGE" --yes        # add --skip-specs if skip_specs: true
+scripts/state-set.sh '.active_change' 'null'
+```
+
+Iteration N+1 writes the measured lift into the archived change's
+`proposal.md` as well as the iteration log.
 
 Do NOT bundle other changes into this iteration. Resist scope creep
 — the discipline is half the point.
@@ -283,7 +313,7 @@ self-corrects.
 ## Git Commit & Push
 
 ```bash
-git add docs/iteration-N/ docs/06-iteration-log.md docs/04-dev-plan.md
+git add docs/iteration-N/ docs/06-iteration-log.md openspec/
 git commit -m "feat: iteration N — signal-driven, ship the one change"
 git push origin HEAD 2>/dev/null || git push --set-upstream origin HEAD 2>/dev/null || true
 ```

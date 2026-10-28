@@ -11,7 +11,13 @@ You are a senior performance engineer. Your job is to establish performance base
 
 ## Phase 1 — Read Context
 
-1. Read `docs/02-system-requirements.md` for NFR performance targets (response times, throughput, concurrent users).
+1. Read the `NFR-PERF-*` requirements and their scenario thresholds (response times, throughput, concurrent users, bundle budgets) from `openspec/specs/**` (usually the `performance` capability) plus the active change's deltas (`state/state.json` `.active_change` → `openspec/changes/<change>/specs/**`):
+   ```bash
+   export OPENSPEC_TELEMETRY=0 DO_NOT_TRACK=1 OPENSPEC_NO_UPDATE_CHECK=1
+   OPENSPEC="npx --yes @fission-ai/openspec@1.15.0"
+   $OPENSPEC show performance --type spec --json
+   ```
+   Every number below (k6 thresholds, VUs, bundle and latency targets) comes from these NFRs. The hardcoded values in this skill are **fallbacks only**, used when no NFR covers that metric — mark them `default` in the report. Conventions: `.claude/skills/build-product-v2/openspec-conventions.md`.
 2. Read `docs/03-system-design.md` for architecture and caching strategy.
 3. Read `package.json` for build scripts and dependencies.
 
@@ -66,6 +72,7 @@ Create `perf/` directory with k6 load test scripts:
 ### `perf/k6-config.js` — Shared configuration
 ```javascript
 export const BASE_URL = __ENV.BASE_URL || 'http://localhost:3000';
+// Values from NFR-PERF-* scenarios; the literals below are fallbacks when no NFR exists.
 export const thresholds = {
   http_req_duration: ['p(95)<500', 'p(99)<1000'],
   http_req_failed: ['rate<0.01'],
@@ -80,6 +87,7 @@ Each test script:
 1. Authenticates (login endpoint)
 2. Exercises the critical user flow (create, read, update, list, search)
 3. Asserts response times and error rates against thresholds
+4. Wraps each measured flow in a k6 `group` tagged with the NFR it verifies (conventions §6), e.g. `group('@NFR-PERF-02 › Switch week under peak', () => { … })`, so `scripts/spec-coverage.sh` traces it. Per-NFR thresholds go on tagged metrics (`'http_req_duration{group:::@NFR-PERF-02 › …}': ['p(95)<…']`).
 
 ### `perf/run-perf-tests.sh`:
 ```bash
@@ -132,11 +140,11 @@ Write `docs/10-performance-report.md`:
 # Performance Report
 
 ## Build Analysis
-| Metric | Value | Target | Status |
-|--------|-------|--------|--------|
-| Total JS bundle | X KB | < 200 KB | ✅/⚠️ |
-| Largest page | X KB | < 100 KB | ✅/⚠️ |
-| Build time | X s | < 60 s | ✅/⚠️ |
+| Metric | NFR | Value | Target | Status |
+|--------|-----|-------|--------|--------|
+| Total JS bundle | NFR-PERF-NN or default | X KB | < 200 KB | ✅/⚠️ |
+| Largest page | NFR-PERF-NN or default | X KB | < 100 KB | ✅/⚠️ |
+| Build time | NFR-PERF-NN or default | X s | < 60 s | ✅/⚠️ |
 
 ## Database Performance
 | Issue | Location | Impact | Fix | Status |
@@ -145,17 +153,19 @@ Write `docs/10-performance-report.md`:
 | Missing index | table.column | ... | Added @@index | Fixed |
 
 ## API Latency Estimates
-| Endpoint | Queries | Cached | Est. Latency | Target |
-|----------|---------|--------|--------------|--------|
-| POST /auth/login | 1 | No | ~50ms | <200ms |
-| GET /projects | 2 | Yes | ~30ms | <100ms |
+| Endpoint | NFR | Queries | Cached | Est. Latency | Target |
+|----------|-----|---------|--------|--------------|--------|
+| POST /auth/login | NFR-PERF-NN or default | 1 | No | ~50ms | <200ms |
+| GET /projects | NFR-PERF-NN or default | 2 | Yes | ~30ms | <100ms |
 
 ## Load Test Results (if run)
-| Test | VUs | Duration | p95 Latency | Error Rate | Status |
-|------|-----|----------|-------------|------------|--------|
-| Smoke | 1 | 30s | ... | ... | ✅ |
-| Load | 50 | 5m | ... | ... | ✅ |
-| Stress | 200 | 5m | ... | ... | ⚠️ |
+| Test | NFR IDs | VUs | Duration | p95 Latency | Error Rate | Status |
+|------|---------|-----|----------|-------------|------------|--------|
+| Smoke | — | 1 | 30s | ... | ... | ✅ |
+| Load | NFR-PERF-NN | 50 | 5m | ... | ... | ✅ |
+| Stress | NFR-PERF-NN | 200 | 5m | ... | ... | ⚠️ |
+
+An `NFR-PERF-*` requirement whose threshold is missed is a failing finding; route it to its implementer. If the NFR's number itself is wrong, propose a MODIFIED delta in the active change (conventions §7) — never edit `openspec/specs/`.
 
 ## Optimizations Applied
 1. ...

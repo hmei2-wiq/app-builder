@@ -13,7 +13,8 @@ You are a senior engineer conducting a thorough code review of the entire codeba
 
 1. Use `Glob` to enumerate all source files.
 2. Read each file fully.
-3. Cross-reference against `docs/02-system-requirements.md` and `docs/03-system-design.md`.
+3. Cross-reference against `docs/03-system-design.md` and the requirements: `openspec/specs/**` plus the active change's deltas (`state/state.json` `.active_change` → `openspec/changes/<change>/specs/**`). Conventions: `.claude/skills/build-product-v2/openspec-conventions.md`.
+4. Run `scripts/spec-coverage.sh` to refresh `docs/11-traceability.md` (requirement → tagged tests).
 
 ## Phase 2 — Review
 
@@ -27,7 +28,7 @@ Evaluate every file across these dimensions:
 | **Reliability** | Missing error handling, unhandled promise rejections, no retries on transient failures |
 | **Test coverage** | Missing unit tests, untested edge cases, missing integration coverage |
 | **Code quality** | Dead code, duplicated logic, overly complex functions, poor naming |
-| **Requirements** | Any FR or NFR from the SRS not implemented or not met |
+| **Requirements** | Any `FR-`/`NFR-` requirement (or scenario) in `openspec/specs/**` + active deltas not implemented or not met |
 | **Design conformance** | Deviations from the system design without documented rationale |
 
 ## Phase 3 — Document
@@ -44,6 +45,7 @@ For each issue:
 - **ID**: CR-001
 - **Severity**: Critical / High / Medium / Low
 - **File & Line**: path/to/file.ts:42
+- **Requirements**: violated requirement IDs (e.g. `FR-NOM-05`, `NFR-SEC-02`), or `none` for pure code-quality issues
 - **Description**: What is wrong
 - **Impact**: What could go wrong if not fixed
 - **Fix**: How to fix it
@@ -51,6 +53,9 @@ For each issue:
 
 ## Test Coverage Gaps
 ## Requirements Coverage Gaps
+(From `docs/11-traceability.md`: every `Priority: M` requirement with no tagged or no passing test, and tags naming unknown IDs.)
+## Design Conformance Deviations
+(Per conventions §7: code wrong → CR issue + fix; spec wrong / code right → MODIFIED delta in the active change with the reason; ambiguous → `OQ-NN` in the active change's `design.md`. Never edit `openspec/specs/`.)
 ## Overall Assessment
 ```
 

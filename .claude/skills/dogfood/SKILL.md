@@ -27,7 +27,13 @@ agent-built SaaS skeletons feel hollow.
 Required:
 - A buildable, runnable app (project's `npm run dev` works)
 - `docs/01c-wedge.md` — wedge workflow (this is the test plan)
-- `docs/03b-ux-design.md` — wireframes (the visual reference)
+- `docs/03b-ux-design.md` — screen → Figma node index (the wireframes
+  themselves live in Figma; 03b tells you which frame to compare against)
+- `docs/16-pricing.md` — trial mechanic (Phase 5 CTA check)
+- `openspec/specs/**` + the active change's deltas (`state/state.json`
+  `.active_change` → `openspec/changes/<change>/specs/**`) — the
+  requirement scenarios each wedge step must satisfy. Conventions:
+  `.claude/skills/build-product-v2/openspec-conventions.md`
 
 If wedge workflow has > 10 steps, only score the first 10 — the wedge
 should fit.
@@ -139,15 +145,25 @@ Save to `dogfood/00-cold-boot.png`. Score 0–10:
 
 ## Phase 3 — Walk the Wedge Workflow
 
+Before walking, map each wedge step to the requirement IDs and
+scenarios it exercises (look them up in the specs, e.g.
+`$OPENSPEC show <capability> --type spec --json`, or via the screen's
+requirement IDs in 03b). A step that maps to no requirement is itself
+a finding — record it as an `OQ-NN` in the active change's
+`design.md` (conventions §7).
+
 For each step in the wedge workflow from `01c-wedge.md`:
 
 1. Use `browse` to perform the user action (click, type, submit,
    upload, etc.)
 2. Screenshot before + after
-3. Diff against the wireframe in `03b-ux-design.md`
-4. Time the step (target: < 5s for self-serve flows)
+3. Diff against the Figma frame for this screen (node ID from the
+   screen index in `03b-ux-design.md`)
+4. Time the step (target: the step's `NFR-PERF-*` threshold if one
+   applies, else < 5s for self-serve flows)
 5. Capture console + network errors
-6. Score 0–10 against the rubric below
+6. Score 0–10 against the rubric below, and mark each mapped
+   requirement scenario pass/fail (its WHEN/THEN observed or not)
 
 Write each step to `dogfood/NN-<step>.png` and append to the report.
 
@@ -248,9 +264,14 @@ Write `docs/dogfood/iteration-N.md`:
 - Notes: …
 
 ## Wedge workflow
-| Step | Score | Time | Issues | Screenshot |
-|------|-------|------|--------|------------|
-| 1. <step> | 8 | 1.2s | (none) | dogfood/01-….png |
+| Step | Requirements | Score | Time | Issues | Screenshot |
+|------|--------------|-------|------|--------|------------|
+| 1. <step> | FR-NOM-01, FR-NOM-02 | 8 | 1.2s | (none) | dogfood/01-….png |
+
+## Requirement scenarios exercised
+| Requirement | Scenario | Step | Pass/Fail | Notes |
+|-------------|----------|------|-----------|-------|
+| FR-NOM-01 | <scenario name> | 1 | Pass | … |
 
 ## Edge probes
 | Probe | Pass/Fail | Notes |
@@ -262,13 +283,16 @@ Write `docs/dogfood/iteration-N.md`:
 
 ## Bugs to file (routed back)
 
-| ID | Severity | Surface | Owner | Description | Repro |
-|----|----------|---------|-------|-------------|-------|
-| DF-001 | High | frontend-developer | … | <one line> | <one line> |
+| ID | Severity | Requirements | Surface | Owner | Description | Repro |
+|----|----------|--------------|---------|-------|-------------|-------|
+| DF-001 | High | FR-NOM-02 | … | frontend-developer | <one line> | <one line> |
 ```
 
-Each bug must name its **owner skill** (which agent should fix it).
-The orchestrator uses this to route.
+Each bug must name its **owner skill** (which agent should fix it)
+and the requirement IDs it violates. The orchestrator uses this to
+route. Bugs that show the spec itself is wrong or ambiguous follow
+conventions §7 (MODIFIED delta or `OQ-NN`), never an edit to
+`openspec/specs/`.
 
 ---
 

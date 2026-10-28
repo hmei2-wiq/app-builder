@@ -26,7 +26,7 @@ If the contract is missing, stop and emit:
 
 ## Phase 1 — Read Context
 
-1. Read `docs/00-tech-stack.md`, `docs/03-system-design.md`, `docs/02-system-requirements.md`.
+1. Read `docs/00-tech-stack.md`, `docs/03-system-design.md`, and the `NFR-OBS-*`, `NFR-ALERT-*` and `NFR-AVL-*` requirements from `openspec/specs/**` (e.g. the `observability` / `availability` capabilities) plus the active change's deltas (`state/state.json` `.active_change`). Alert thresholds and SLOs come from those NFR scenarios; the numbers in this skill are fallbacks when no NFR exists. Conventions: `.claude/skills/build-product-v2/openspec-conventions.md`.
 2. Read the `infra/` directory (if exists) to confirm cloud provider matches `contract.cloud.provider`.
 3. Read the existing codebase to understand the middleware and API structure.
 

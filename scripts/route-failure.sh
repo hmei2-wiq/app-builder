@@ -62,6 +62,21 @@ route() {
       # using the dogfood-style bug owner field.
       echo "frontend-developer";;
 
+    spec-validate)
+      # OpenSpec structure / --strict failure in a spec or change delta.
+      echo "analyst";;
+
+    traceability)
+      # spec-coverage.sh: uncovered Must requirement, failing tagged test,
+      # orphan tag, or a header without ID/Priority.
+      case "$AREA" in
+        openspec/*)               echo "analyst";;            # malformed header / missing Priority
+        *e2e*|*playwright*)       echo "e2e-tester";;
+        *perf*|*k6*)              echo "perf-tester";;
+        *components*|*pages*|*frontend*) echo "frontend-developer";;
+        *)                        echo "e2e-tester";;          # default: an AC with no test
+      esac;;
+
     a11y)
       echo "ux-designer";;
 

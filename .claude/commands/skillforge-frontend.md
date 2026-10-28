@@ -336,7 +336,7 @@ Append to `FRONTEND_CHANGELOG.md` (create it if it doesn't exist) in this format
 Stage and commit all changed files:
 
 ```bash
-cd /home/hmei/jobhunt/Anti Plagiarism
+cd .   # project root
 
 # Stage only frontend files + changelog (never stage .env or secrets)
 git add frontend/ FRONTEND_CHANGELOG.md

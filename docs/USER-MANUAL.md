@@ -93,7 +93,7 @@ they gate are the ones humans should make.
 
 ## Prerequisites
 
-Environment variables (set in `~/.bashrc`):
+Environment variables (set in `./.bashrc` at the project root — git-ignored; `source ./.bashrc` before running):
 
 ```bash
 # CI/CD (Buildkite is the cost-effective default)

@@ -30,7 +30,7 @@ DEFAULT_STATE=$(jq -n \
   --arg now "$NOW" \
   --arg idea "$PRODUCT_IDEA" \
   '{
-    schema_version: 1,
+    schema_version: 2,
     started_at: $now,
     product_idea: $idea,
     wedge_sentence: null,
@@ -39,6 +39,10 @@ DEFAULT_STATE=$(jq -n \
     anti_axis: null,
     scale_tier: "preview",
     current_phase: "ceo",
+    source_spec: null,
+    product_type: "saas",
+    active_change: null,
+    archived_changes: [],
     phase_status: {},
     critic_verdicts: {},
     kill_switches: [],

@@ -147,11 +147,12 @@ operational. Format as constraints, not suggestions:
 
 ### product-spec
 - The MVP user-story map MUST contain exactly one critical flow: <one sentence>
-- Max 3 supporting flows. Anything else → `[V2]`.
+- Max 3 supporting flows. Anything else → `Wedge: v2`, `Priority: C`.
 
 ### analyst
-- FRs that do not directly serve the critical flow MUST be tagged `[Out-of-wedge]`
-  and dropped from V1.
+- Requirements that do not directly serve the critical flow MUST be tagged
+  `Wedge: v2` with `Priority: C` (OpenSpec metadata line — see
+  `.claude/skills/build-product-v2/openspec-conventions.md` §3) and dropped from V1.
 
 ### designer
 - Architecture decisions MUST be justified against the wedge. The cheapest

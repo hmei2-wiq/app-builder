@@ -21,5 +21,5 @@ Use this repository as a starting point for new product builds where you want a 
 
 ## Notes
 
-- The local Codex skills were installed into `~/.codex/skills` on this machine and are not stored in this repository.
+- The Codex skills live in `./.codex/skills`, inside this project.
 - If you want Codex-specific project files in future clones, add them separately in a writable `.codex/` directory in that environment.

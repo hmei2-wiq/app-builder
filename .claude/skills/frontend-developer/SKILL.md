@@ -29,13 +29,13 @@ If the contract is missing, stop and emit:
 
 ## Phase 1 — Planning
 
-1. Read `docs/00-tech-stack.md`, `docs/03b-ux-design.md`, `docs/01b-product-spec.md`, `docs/01c-wedge.md`, `docs/02-system-requirements.md`, `docs/03-system-design.md` in full.
+Follow `.claude/skills/build-product-v2/openspec-conventions.md` (tasks.md format, test tagging). The active change is `state/state.json` `.active_change`; call it `<change>`.
+
+1. Read `docs/00-tech-stack.md`, `docs/03b-ux-design.md`, `docs/01b-product-spec.md` (personas), `docs/01c-wedge.md`, `docs/03-system-design.md` in full, then the active change (`openspec/changes/<change>/proposal.md`, `design.md`, `tasks.md`, delta specs via `$OPENSPEC show <change> --json --deltas-only`) and every affected `openspec/specs/<capability>/spec.md` (`$OPENSPEC show <cap> --type spec --json`). `OPENSPEC` is defined in the conventions file §2.
 2. Read `docs/07-api-reference.md` or `openapi.yaml` (if exists) for exact API request/response shapes.
 3. Scan existing backend code with `Glob` to understand actual API routes and response types.
 
-4. Update `docs/04-dev-plan.md` with frontend-specific tasks:
-   - Tag each task with `[Frontend]`
-   - Group tasks:
+4. Work from the `[frontend]` tasks in `openspec/changes/<change>/tasks.md`. If a task you need is missing, append it in the tasks.md format (`- [ ] X.Y [frontend] <desc> — implements: <IDs>`) before coding, and add an ADDED/MODIFIED delta (then `$OPENSPEC validate <change> --strict --no-interactive`) if the behaviour is new. Refuse work that maps to no task. Typical task groups:
      1. Design system setup (CSS framework config from contract.frontend.css, base styles, theme)
      2. Component library (all reusable components from the inventory; pull from contract.frontend.ui_kit where possible)
      3. Layout shells (app layout, sidebar, header, footer, auth layout)
@@ -178,6 +178,8 @@ Implement all application pages. For each page:
 
 ## Phase 10 — Component Tests
 
+Every test that verifies a requirement carries `@<ID> › <scenario>` in its title (e.g. `it('@FR-PLAN-04 › Drag a nomination onto an empty end', …)`). Configure the runner's JSON reporter to `reports/test-results/<runner>.json` (vitest: `reporters: ['default', ['json', { outputFile: 'reports/test-results/vitest.json' }]]`) so the `traceability` gate can verify passes.
+
 Write tests for:
 1. **Component unit tests** (React Testing Library):
    - Every UI component renders without crashing
@@ -190,7 +192,7 @@ Write tests for:
    - Forms submit correctly (mock API)
    - Error states render when API fails
 
-Run all tests: `npm run test`. Fix failures until all pass.
+Run all tests with `contract.runtime.package_manager` from `docs/00-tech-stack.md` (e.g. `pnpm run test`). Fix failures until all pass. Tick each `[frontend]` task `- [x]` in tasks.md once its tagged tests pass.
 
 ## Rules
 
@@ -200,11 +202,12 @@ Run all tests: `npm run test`. Fix failures until all pass.
 - Never suppress TypeScript or ESLint errors.
 - Never hardcode strings that should come from the API or constants.
 - Always handle loading, error, and empty states — no page should ever show a blank screen.
-- Keep `docs/04-dev-plan.md` updated as a live status document throughout.
+- Keep the active change's `tasks.md` ticked as a live status document throughout.
+- If the UI must deviate from a requirement, edit the active change's delta (MODIFIED) and re-run validate. Never edit `openspec/specs/` directly.
 
 ## Git Commit & Push
 
-After the full test suite is green and all frontend tasks are marked ✅:
+After the full test suite is green and all `[frontend]` tasks are ticked `- [x]`:
 
 ```
 git add .

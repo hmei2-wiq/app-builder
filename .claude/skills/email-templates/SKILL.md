@@ -26,7 +26,7 @@ to be rerun.
 
 ## Phase 1 — Read Context
 
-1. Read `docs/00-tech-stack.md`, `docs/02-system-requirements.md`, `docs/03-system-design.md`, `docs/01b-product-spec.md` (if exists), `docs/03b-ux-design.md` (if exists).
+1. Read `docs/00-tech-stack.md`, `docs/03-system-design.md`, `docs/01b-product-spec.md` (if exists), `docs/03b-ux-design.md` (if exists), the requirements that send email in `openspec/specs/**` and the active change's deltas (`state/state.json` `.active_change` = `<change>`; `$OPENSPEC show <change> --json --deltas-only`), and the `[email]` tasks in `openspec/changes/<change>/tasks.md`. Conventions and `OPENSPEC`: `.claude/skills/build-product-v2/openspec-conventions.md`.
 
 ## Phase 2 — Email Inventory
 
@@ -177,14 +177,15 @@ This ensures email failures don't crash API requests and enables retry logic.
    - Templates contain required elements (unsubscribe link, plain text)
    - Email service mock verifies correct payload sent
    - Subject lines are not empty
+   - Tag each test that verifies a requirement with its ID in the title (`it('@FR-AUTH-04 › Password reset email contains a single-use link', …)`)
 3. Run the full test suite via `Bash`. If any test fails:
    - Diagnose → fix → re-run (repeat until green)
-4. Confirm 0 failures before committing.
+4. Confirm 0 failures before committing, then tick each `[email]` task `- [x]` in tasks.md.
 
 ## Git Commit & Push
 
 ```
-git add src/lib/email/ package.json
+git add src/lib/email/ package.json openspec/changes/<change>/tasks.md
 git commit -m "feat: add transactional email templates and email service"
 git push origin HEAD 2>/dev/null || git push --set-upstream origin HEAD 2>/dev/null || true
 ```

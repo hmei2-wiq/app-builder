@@ -38,7 +38,7 @@ If the contract is missing, stop and emit:
 
 ## Phase 2 — Cross-Reference
 
-1. Read `docs/02-system-requirements.md` — map each FR to its implementing endpoint(s).
+1. Read the requirements — map each `FR-` ID to its implementing endpoint(s). Sources: `openspec/specs/**` (current truth) plus the deltas in the active change (`state/state.json` `.active_change` → `openspec/changes/<change>/specs/**`). Use `$OPENSPEC list --specs --json` and `$OPENSPEC show <capability> --type spec --json` (CLI setup and ID format: `.claude/skills/build-product-v2/openspec-conventions.md` §2–3).
 2. Read `docs/03-system-design.md` API Design section — check for endpoints specified but not implemented, or implemented but not specified.
 3. Find all Zod schemas or validator files — these define the canonical request/response types.
 4. Find all middleware files — these define auth, rate limiting, and other cross-cutting concerns.
@@ -144,8 +144,8 @@ Description.
 ```
 
 Include:
-- Requirements coverage table: which FR-xxx each endpoint fulfills.
-- Endpoints with no corresponding requirement (potential orphans).
+- Requirements coverage table: which requirement IDs (`FR-<AREA>-NN`, from `openspec/specs/**` + active change deltas) each endpoint fulfills.
+- Endpoints with no corresponding requirement (orphans). For each, draft a change proposal note: add an `OQ-NN` entry under `## Open Questions` in the active change's `design.md` ("endpoint X has no requirement — add as ADDED/MODIFIED delta, or remove?"). If no change is active, list them in this section as candidate ADDED/MODIFIED deltas for `iterate`. Never edit `openspec/specs/` (conventions §4, §7).
 - Requirements with no corresponding endpoint (potential gaps).
 
 ## Phase 5 — Swagger UI (Optional)

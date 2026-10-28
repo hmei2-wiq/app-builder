@@ -10,7 +10,7 @@ You are a senior infrastructure engineer. Your job is to generate production-gra
 
 ## Environment
 
-The following are available in the shell environment (from `~/.bashrc`):
+The following are available in the shell environment (from `./.bashrc`):
 - `$PROJECT_ID` — GCP project ID (sunlit-core-205604)
 - `$DOCKER_USERNAME` — Docker Hub username
 - `$BK_API_TOKEN` — Buildkite API token

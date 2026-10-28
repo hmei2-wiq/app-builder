@@ -34,8 +34,8 @@ If the contract is missing or `ai.cost_tracking` is unset, stop and emit:
 
 ## Phase 1 — Read Context
 
-1. Read `docs/00-tech-stack.md`, `docs/01c-wedge.md` (especially the wedge workflow), `docs/01b-product-spec.md`, `docs/02-system-requirements.md`, `docs/03-system-design.md`.
-2. Identify which wedge workflow steps depend on the model. These are the steps to instrument with full observability + evals.
+1. Read `docs/00-tech-stack.md`, `docs/01c-wedge.md` (especially the wedge workflow), `docs/01b-product-spec.md`, `docs/03-system-design.md`, the active change (`state/state.json` `.active_change` = `<change>`: `proposal.md`, `design.md`, `tasks.md`, deltas via `$OPENSPEC show <change> --json --deltas-only`) and affected `openspec/specs/**`. Conventions and `OPENSPEC`: `.claude/skills/build-product-v2/openspec-conventions.md`. Work from the `[ai]` tasks in tasks.md; append a task (and delta if behaviour is new) before building anything that maps to none.
+2. Identify which wedge workflow steps (and which `FR-`/`NFR-` requirements) depend on the model. These are the steps to instrument with full observability + evals.
 3. Read existing backend code to find any pre-existing AI calls — wrap them in the patterns defined here.
 
 If the contract names `ai.provider: anthropic`, **invoke the `claude-api`
@@ -145,6 +145,7 @@ Required for every prompt that touches the wedge workflow.
      <task>.config.yaml
      <task>.fixtures.jsonl    # input/expected pairs
    ```
+   Name/describe each eval case with the requirement IDs it verifies as well as the wedge step, e.g. `description: "@FR-EXT-02 › Extract invoice total (wedge step 2)"`, so `scripts/spec-coverage.sh` counts it.
 3. Define **gates** (assertions):
    - Schema validity (output parses as expected JSON / matches Zod schema)
    - Wedge-workflow specific (e.g. "extracted invoice total within ±0.01")
@@ -153,6 +154,8 @@ Required for every prompt that touches the wedge workflow.
 4. Wire into CI:
    - `contract.ci.provider: buildkite` → add a `:test_tube: AI Evals` step that runs evals on PRs touching `src/prompts/**` or `src/lib/ai/**`
    - Block merge on regressions (`promptfoo eval --no-cache --fail-on-regression`)
+
+Tick each `[ai]` task `- [x]` in tasks.md once its tagged tests and evals pass.
 
 ## Phase 7 — Streaming + UX hooks
 
@@ -175,7 +178,7 @@ For wedge steps surfaced to users:
 ## Git Commit & Push
 
 ```bash
-git add src/lib/ai src/prompts evals prisma/schema.prisma
+git add src/lib/ai src/prompts evals prisma/schema.prisma openspec/changes/<change>/
 git commit -m "feat: AI features (RAG, prompts, eval harness, cost tracking)"
 git push origin HEAD 2>/dev/null || git push --set-upstream origin HEAD 2>/dev/null || true
 ```

@@ -57,7 +57,10 @@ sufficient here.
 
 Read `docs/00-tech-stack.md`, `docs/01-market-analysis.md`,
 `docs/01b-product-spec.md`, `docs/01c-wedge.md`,
-`docs/02-system-requirements.md`, `docs/03-system-design.md` in full. If a
+`docs/03-system-design.md` in full, plus the requirements: `openspec/specs/**`
+and the active change's deltas (`state/state.json` `.active_change` →
+`openspec/changes/<change>/specs/**`; conventions in
+`.claude/skills/build-product-v2/openspec-conventions.md`). If a
 client requirements brief lists explicit screens, treat that list as the
 minimum screen set to deliver.
 
@@ -155,8 +158,8 @@ This file is the repo-committed **companion** to the Figma deliverable —
 a pointer and machine-readable token/index, not a replacement. Sections:
 
 1. **Figma deliverable** — file URL, file key, page name, last-updated.
-2. **Screen index** — table: screen → Figma node ID → responsive variants
-   → states present.
+2. **Screen index** — table: screen → Figma node ID → requirement IDs
+   served (`FR-…`/`NFR-A11Y-…`) → responsive variants → states present.
 3. **Design principles** (3–5).
 4. **Design tokens** — palette, type, spacing, radius + the theme-config
    snippet (exported from the Figma variables in Phase 8).
@@ -179,6 +182,7 @@ frames are the wireframes now.
 - [ ] Color styles pass WCAG AA contrast
 - [ ] Figma components map 1:1 to `contract.frontend.ui_kit`
 - [ ] `03b` records the file key + screen→node-ID index (build can target exact nodes)
+- [ ] Every user-facing `Priority: M` requirement is served by ≥ 1 screen in the index, and every screen lists ≥ 1 requirement ID
 - [ ] Tokens in `03b` were exported from the Figma variables (no drift between doc and file)
 - [ ] The home/landing frame makes the wedge legible within 5s of first paint (wedge rule)
 

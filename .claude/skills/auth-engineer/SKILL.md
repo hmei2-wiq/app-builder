@@ -32,7 +32,7 @@ If the contract is missing, stop and emit:
 
 ## Phase 1 — Read Context
 
-1. Read `docs/00-tech-stack.md`, `docs/01c-wedge.md`, `docs/02-system-requirements.md`, `docs/03-system-design.md`.
+1. Read `docs/00-tech-stack.md`, `docs/01c-wedge.md`, `docs/03-system-design.md`, and the affected specs: the auth/security capability and `NFR-SEC-*` requirements in `openspec/specs/**` plus the active change's deltas (`state/state.json` `.active_change` = `<change>`; `$OPENSPEC show <change> --json --deltas-only`), and the `[auth]` tasks in `openspec/changes/<change>/tasks.md`. Conventions and `OPENSPEC`: `.claude/skills/build-product-v2/openspec-conventions.md`.
 2. Identify the auth flows the product needs: sign-up, sign-in, password reset, email verification, OAuth (Google / GitHub / etc.), team / org accounts, RBAC.
 
 ## Phase 2 — Provider-specific scaffolding
@@ -116,8 +116,9 @@ Hand off the auth client patterns to `frontend-developer`. For:
 - Supabase → `useUser()` from `@supabase/auth-helpers-react` + SSR helpers
 - Auth0 → `useUser()` from `@auth0/nextjs-auth0/client`
 
-Document the chosen pattern in `docs/04-dev-plan.md` so
-`frontend-developer` doesn't reimplement it.
+Document the chosen pattern in the active change's
+`openspec/changes/<change>/design.md` (an `## Auth client pattern`
+section) so `frontend-developer` doesn't reimplement it.
 
 ## Phase 4 — Cross-cutting
 
@@ -133,6 +134,10 @@ Document the chosen pattern in `docs/04-dev-plan.md` so
    - `GET /api/auth/export` (JSON of all user data)
 
 ## Phase 5 — Tests
+
+Tag each flow test's title with the requirement IDs it verifies
+(`@FR-AUTH-01 › Sign-up then sign-in`, `@NFR-SEC-03 › …`). Tick each
+`[auth]` task `- [x]` in tasks.md once its tagged tests pass.
 
 1. Sign-up → email verify → sign-in → access protected route (200).
 2. Sign-in with wrong password → 401, audit log entry.
@@ -153,7 +158,7 @@ Document the chosen pattern in `docs/04-dev-plan.md` so
 ## Git Commit & Push
 
 ```bash
-git add src/lib/auth src/middleware.ts src/app/api/auth prisma/schema.prisma
+git add src/lib/auth src/middleware.ts src/app/api/auth prisma/schema.prisma openspec/changes/<change>/
 git commit -m "feat: auth via $(jq -r .auth.default docs/00-tech-stack.md 2>/dev/null || echo 'lucia')"
 git push origin HEAD 2>/dev/null || git push --set-upstream origin HEAD 2>/dev/null || true
 ```

@@ -37,7 +37,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # ---- gate registry (in dependency order) ----
-GATES=(typecheck lint seed-integrity unit mutation integration contract e2e a11y lighthouse visual)
+GATES=(spec-validate typecheck lint seed-integrity unit mutation integration contract e2e traceability a11y lighthouse visual)
 
 results=()         # "<gate>:<pass|fail|skip>:<reason>"
 fail_count=0
@@ -90,14 +90,25 @@ run_gate() {
     record "$name" skip "filtered out"
     return 0
   fi
-  if "$@" >/tmp/qg-"$name".log 2>&1; then
+  mkdir -p ./reports/quality-gates
+  if "$@" >./reports/quality-gates/"$name".log 2>&1; then
     record "$name" pass "ok"
   else
-    record "$name" fail "see /tmp/qg-$name.log"
+    record "$name" fail "see ./reports/quality-gates/$name.log"
   fi
 }
 
 # ---- gate implementations ----
+gate_spec_validate() {
+  # OpenSpec structure: every spec and active change parses and passes --strict.
+  # Conventions: .claude/skills/build-product-v2/openspec-conventions.md
+  if [[ ! -d openspec ]]; then
+    echo "no openspec/ directory"; return 0
+  fi
+  OPENSPEC_TELEMETRY=0 DO_NOT_TRACK=1 OPENSPEC_NO_UPDATE_CHECK=1 \
+    npx --yes "@fission-ai/openspec@${OPENSPEC_VERSION:-1.15.0}" validate --all --strict --no-interactive
+}
+
 gate_typecheck() {
   if [[ -f tsconfig.json ]]; then
     npx --yes tsc --noEmit
@@ -315,6 +326,15 @@ gate_e2e() {
   fi
 }
 
+gate_traceability() {
+  # Every Priority: M requirement has a passing (or, without runner JSON,
+  # a non-skipped) test tagged @<ID>; no tag names a missing requirement.
+  if [[ ! -d openspec ]]; then
+    echo "no openspec/ directory"; return 0
+  fi
+  bash "$ROOT/scripts/spec-coverage.sh"
+}
+
 gate_a11y() {
   # Standalone axe-core run if a script is wired; otherwise rely on
   # @axe-core/playwright assertions inside the e2e suite.
@@ -331,10 +351,10 @@ gate_lighthouse() {
     echo "LIGHTHOUSE_URL unset"; return 0
   fi
   npx --yes lighthouse "$LIGHTHOUSE_URL" \
-    --output=json --output-path=/tmp/lh.json --quiet \
+    --output=json --output-path=./reports/lighthouse.json --quiet \
     --chrome-flags='--headless=new --no-sandbox'
   local perf
-  perf=$(node -e "console.log(Math.round(require('/tmp/lh.json').categories.performance.score * 100))")
+  perf=$(node -e "console.log(Math.round(require('./reports/lighthouse.json').categories.performance.score * 100))")
   echo "lighthouse perf: $perf (budget $LIGHTHOUSE_PERF_BUDGET)"
   [[ "$perf" -ge "$LIGHTHOUSE_PERF_BUDGET" ]]
 }
@@ -354,6 +374,7 @@ echo
 
 for g in "${GATES[@]}"; do
   case "$g" in
+    spec-validate)   run_gate "$g" gate_spec_validate;;
     typecheck)       run_gate "$g" gate_typecheck;;
     lint)            run_gate "$g" gate_lint;;
     seed-integrity)  run_gate "$g" gate_seed_integrity;;
@@ -362,6 +383,7 @@ for g in "${GATES[@]}"; do
     integration) run_gate "$g" gate_integration;;
     contract)    run_gate "$g" gate_contract;;
     e2e)         run_gate "$g" gate_e2e;;
+    traceability) run_gate "$g" gate_traceability;;
     a11y)        run_gate "$g" gate_a11y;;
     lighthouse)  run_gate "$g" gate_lighthouse;;
     visual)      run_gate "$g" gate_visual;;

@@ -25,13 +25,13 @@ Use the ORM and engine named in the contract. Do not silently substitute.
 
 ## Phase 1 — Read Context
 
-1. Read `docs/00-tech-stack.md`, `docs/03-system-design.md`, `docs/02-system-requirements.md`, `docs/01-market-analysis.md`.
+1. Read `docs/00-tech-stack.md`, `docs/03-system-design.md`, and the active change (`state/state.json` `.active_change`, call it `<change>`): `openspec/changes/<change>/design.md` and its delta specs (`$OPENSPEC show <change> --json --deltas-only`), focusing on data requirements and `NFR-DATA-*`. Conventions and the `OPENSPEC` command: `.claude/skills/build-product-v2/openspec-conventions.md`.
 2. Find and read the current schema file matching `contract.backend.orm`:
    - prisma → `prisma/schema.prisma`
    - drizzle → `db/schema.ts`
    - kysely → `db/schema.ts` + migration files
    - raw-sql → `migrations/*.sql`
-3. Check `docs/04-dev-plan.md` for any pending schema-related tasks.
+3. Read the `[db]` tasks in `openspec/changes/<change>/tasks.md`. If a schema change you need maps to no task, append one (`- [ ] X.Y [db] <desc> — implements: <IDs>`) before writing it.
 
 ## Phase 2 — Migration Audit
 
@@ -111,7 +111,7 @@ For each migration, create a corresponding rollback:
 
 ## Phase 6 — Seed Data Tests
 
-Write automated tests for seed data in `src/__tests__/seed.test.ts` (or equivalent):
+Write automated tests for seed data in `src/__tests__/seed.test.ts` (or equivalent). Where a seed test supports a requirement (e.g. a wedge-critical table an `FR-` scenario depends on, or an `NFR-DATA-*` rule), tag its title with that ID, e.g. `test('@FR-ING-01 › promotions table is seeded', …)`:
 
 ```typescript
 describe('Seed Data', () => {
@@ -186,7 +186,7 @@ This allows E2E and integration tests to use the same data patterns as the seed,
 
 ## Phase 8 — Document
 
-If not already in the dev plan, add migration-related notes to `docs/04-dev-plan.md`:
+Tick each completed `[db]` task `- [x]` in `openspec/changes/<change>/tasks.md`. Add migration-related notes to the change's `design.md` (a `## Data migrations` section):
 - List of migrations created
 - Seed data summary (record counts per table)
 - Test fixtures available for other test suites
@@ -265,7 +265,7 @@ If either fails, the phase is `failed`, not `done`. Do not commit.
 ## Git Commit & Push
 
 ```
-git add prisma/ package.json docker-compose.yml .env.example state/artifacts/db-migrator.json
+git add prisma/ package.json docker-compose.yml .env.example state/artifacts/db-migrator.json openspec/changes/<change>/
 git commit -m "feat: add database migrations, seed data, and manifest"
 git push origin HEAD 2>/dev/null || git push --set-upstream origin HEAD 2>/dev/null || true
 ```

@@ -31,17 +31,19 @@ If the contract is missing, stop and emit:
 If a feature requires a vendor not in the contract (e.g. Twilio for SMS,
 Stripe for payments, SendGrid for email), check whether the contract
 already names a provider for that category. If yes, use it. If no, add
-a `STACK_GAP: <category>` entry to `docs/04-dev-plan.md` and surface
-it instead of silently picking a vendor.
+a `STACK_GAP: <category>` entry as an `OQ-NN` under `## Open Questions`
+in the active change's `design.md` and surface it instead of silently
+picking a vendor.
 
 ## Phase 1 — Planning
 
-1. Read `docs/00-tech-stack.md`, `docs/01-market-analysis.md`, `docs/01b-product-spec.md`, `docs/01c-wedge.md`, `docs/02-system-requirements.md`, and `docs/03-system-design.md` in full.
-2. Create or update `docs/04-dev-plan.md` with backend-specific tasks:
-   - Numbered list of implementation tasks (granular — each completable in one focused session)
-   - Tag each task with `[Backend]`
-   - For each task: description, acceptance criteria, test types needed (unit / integration)
-   - Group tasks by module (Auth, Core CRUD, Business Logic, External Integrations, Background Jobs)
+Follow `.claude/skills/build-product-v2/openspec-conventions.md` (requirement format, tasks.md format, test tagging). The active change is `state/state.json` `.active_change`; call it `<change>`.
+
+1. Read `docs/00-tech-stack.md`, `docs/01c-wedge.md`, and `docs/03-system-design.md` in full, then the active change: `openspec/changes/<change>/proposal.md`, `design.md`, `tasks.md`, and its delta specs (`$OPENSPEC show <change> --json --deltas-only`), plus every affected `openspec/specs/<capability>/spec.md` (`$OPENSPEC show <cap> --type spec --json`). `OPENSPEC` and its env vars are defined in the conventions file §2.
+2. Work from the `[backend]` tasks in `openspec/changes/<change>/tasks.md` (and `[db]` / `[auth]` tasks if `db-migrator` / `auth-engineer` did not run):
+   - If a task you need is missing, append it in the tasks.md format (`- [ ] X.Y [backend] <desc> — implements: <IDs>`) before coding; if the behaviour is new, add an ADDED/MODIFIED delta to the change's `specs/` and re-run `$OPENSPEC validate <change> --strict --no-interactive`.
+   - Refuse work that maps to no task.
+   - Each task's tests derive from the `#### Scenario:` blocks of the requirements it `implements:`.
 
 ### Task ordering (implement in this order):
 1. **Database & ORM setup** — schema, client singleton, connection pooling, using `contract.backend.orm` and `contract.database.engine`
@@ -71,11 +73,11 @@ it instead of silently picking a vendor.
        utils/          # Shared utilities
    ```
 2. Install backend dependencies — versions match `contract.runtime.*` and `contract.backend.*`.
-3. Configure the unit test framework named in `contract.testing.unit` with test database setup.
+3. Configure the unit test framework named in `contract.testing.unit` with test database setup, plus a JSON reporter writing to `reports/test-results/<runner>.json` (the `traceability` gate reads it). Vitest: `reporters: ['default', ['json', { outputFile: 'reports/test-results/vitest.json' }]]`; Jest: `--json --outputFile=reports/test-results/jest.json`.
 
 ## Phase 3 — Iterative Implementation Loop
 
-For each task in the dev plan, repeat this loop until the task is complete:
+For each `[backend]` task in the active change's tasks.md, repeat this loop until the task is complete:
 
 ```
 LOOP:
@@ -84,13 +86,14 @@ LOOP:
      - Unit tests for pure business logic (services, validators, utils)
      - Integration tests for API routes (test DB, real request/response)
      - Mock external services (AI, payments, email, etc. — every vendor named in the contract) in tests
+     - Every test title carries `@<ID> › <scenario>` for the requirement scenario it verifies (e.g. `it('@FR-NOM-05 › Nominate after deadline is refused', …)`)
   3. Run tests via Bash
   4. If tests fail:
        a. Read the failure output carefully
        b. Identify root cause
        c. Fix the code or test
        d. Go to step 3
-  5. If tests pass: mark task complete in docs/04-dev-plan.md (add ✅)
+  5. If the task's tagged tests pass: tick it `- [x]` in openspec/changes/<change>/tasks.md
   6. Move to next task
 ```
 
@@ -109,7 +112,7 @@ Do NOT move to the next task until the current task's tests pass.
 After all tasks are complete:
 
 ### 4a. API Flow Integration Tests
-1. Write integration tests covering end-to-end API flows from the SRS use cases:
+1. Write integration tests covering end-to-end API flows from the requirement scenarios in the active change and affected specs (titles tagged `@<ID> › <scenario>`):
    - Register → verify email → login → create project → generate AI plan → publish tasks → etc.
 2. Test cross-module interactions (e.g., accepting a quote triggers notification + payment hold).
 
@@ -155,11 +158,12 @@ Test edge cases specifically:
 - Never expose internal errors to clients — log the full error server-side, return generic message to client.
 - Never skip tests to make progress faster.
 - Never mark a task complete unless its tests actually pass.
-- Keep `docs/04-dev-plan.md` updated as a live status document throughout.
+- Keep the active change's `tasks.md` ticked as a live status document throughout.
+- If the implementation must deviate from a requirement, edit the active change's delta (MODIFIED, whole block copied) and re-run `$OPENSPEC validate <change> --strict --no-interactive`. Never edit `openspec/specs/` directly.
 
 ## Git Commit & Push
 
-After the full test suite is green and all backend tasks are marked ✅:
+After the full test suite is green and all `[backend]` tasks are ticked `- [x]`:
 
 ```
 git add .

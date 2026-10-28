@@ -1,37 +1,38 @@
 {
   "permissions": {
     "allow": [
-      "*",
       "WebSearch",
       "Bash(gh auth *)",
       "Bash(git add *)",
       "Bash(git commit *)",
       "Bash(gh repo *)",
       "Skill(browse)",
-      "Bash(chmod +x /home/hmei/jobhunt/build-product/claude_claude_scripts/state-init.sh /home/hmei/jobhunt/build-product/claude_claude_scripts/state-set.sh /home/hmei/jobhunt/build-product/claude_claude_scripts/state-decide.sh)",
-      "Bash(chmod +x /home/hmei/jobhunt/build-product/claude_claude_scripts/quality-gates.sh /home/hmei/jobhunt/build-product/claude_claude_scripts/route-failure.sh)",
-      "Bash(bash -n /home/hmei/jobhunt/build-product/claude_claude_scripts/quality-gates.sh)",
-      "Bash(bash -n /home/hmei/jobhunt/build-product/claude_claude_scripts/route-failure.sh)",
-      "Bash(bash -n /home/hmei/jobhunt/build-product/claude_claude_scripts/state-init.sh)",
-      "Bash(bash -n /home/hmei/jobhunt/build-product/claude_claude_scripts/state-set.sh)",
+      "Bash(chmod +x ./scripts/state-init.sh ./scripts/state-set.sh ./scripts/state-decide.sh)",
+      "Bash(chmod +x ./scripts/quality-gates.sh ./scripts/route-failure.sh)",
+      "Bash(bash -n ./scripts/quality-gates.sh)",
+      "Bash(bash -n ./scripts/route-failure.sh)",
+      "Bash(bash -n ./scripts/state-init.sh)",
+      "Bash(bash -n ./scripts/state-set.sh)",
       "Bash(git push *)",
-      "Bash(grep -nE '\\(skill[: ]+\\\\`?[a-z-]+|\\\\binvoke|skill\\\\s*=\\\\s*\"[a-z-]+\"|`/?[a-z-]+`\\)' /home/hmei/jobhunt/build-product/.claude/skills/build-product-v2/SKILL.md)",
+      "Bash(grep -nE '\\(skill[: ]+\\\\`?[a-z-]+|\\\\binvoke|skill\\\\s*=\\\\s*\"[a-z-]+\"|`/?[a-z-]+`\\)' ./.claude/skills/build-product-v2/SKILL.md)",
       "Bash(grep -E \"^\\(build-product|developer|ui-design\\)$\")",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:geminicli.com)",
-      "Bash(chmod +x /home/hmei/jobhunt/build-product/gemini_claude_scripts/gemini-build-product-v2)",
+      "Bash(chmod +x ./bin/gemini-build-product-v2)",
       "Bash(chmod +x *)",
-      "Bash(/home/hmei/jobhunt/build-product/gemini_claude_scripts/port-skills-to-gemini.sh)",
-      "Bash(bash -n /home/hmei/jobhunt/build-product/scripts/quality-gates.sh)",
+      "Bash(./bin/port-skills-to-gemini.sh)",
+      "Bash(bash -n ./scripts/quality-gates.sh)",
       "Bash(scripts/quality-gates.sh --only seed-integrity)",
-      "Bash(bash -n /home/hmei/jobhunt/build-product/scripts/route-failure.sh)",
+      "Bash(bash -n ./scripts/route-failure.sh)",
       "Bash(scripts/route-failure.sh --gate seed-integrity)",
       "Bash(scripts/route-failure.sh --gate dogfood-empty-seed)",
       "Bash(bash -n scripts/quality-gates.sh)",
       "Bash(bash -n scripts/route-failure.sh)",
       "Skill(update-config)",
       "Bash(gh api *)",
-      "Bash(git check-ignore *)"
+      "Bash(git check-ignore *)",
+      "Bash(grep -nE '^#{1,3} ' docs/input.md)",
+      "Bash(grep -nE '^#{1,3} ' docs/orchestrator-workflow.md docs/USER-MANUAL.md)"
     ],
     "defaultMode": "bypassPermissions"
   },
@@ -42,7 +43,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/hmei/jobhunt/build-product/scripts/git-guard.sh",
+            "command": "./scripts/git-guard.sh",
             "timeout": 10
           }
         ]

@@ -14,7 +14,7 @@ You are a legal compliance engineer. Your job is to generate all legally require
 ## Phase 1 — Read Context
 
 1. Read `docs/01-market-analysis.md` for target market, geography, and industry.
-2. Read `docs/02-system-requirements.md` for data requirements and user types.
+2. Read the requirements in `openspec/specs/**` plus the active change's deltas (`state/state.json` `.active_change` → `openspec/changes/<change>/specs/**`) for data requirements, user types, and `NFR-COMP-*` / `NFR-DATA-*` (retention, residency, consent) requirements. Conventions: `.claude/skills/build-product-v2/openspec-conventions.md`.
 3. Read `docs/03-system-design.md` for:
    - What personal data is collected (user fields, PII)
    - What external services process data (Stripe, SendGrid, AI APIs, analytics)

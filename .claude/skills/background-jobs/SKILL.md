@@ -25,7 +25,7 @@ If `contract.queue.required: false`, exit with status `Deferred`.
 
 ## Phase 1 — Read Context
 
-1. Read `docs/00-tech-stack.md`, `docs/02-system-requirements.md`, `docs/03-system-design.md`.
+1. Read `docs/00-tech-stack.md`, `docs/03-system-design.md`, the requirements in `openspec/specs/**` and the active change's deltas (`state/state.json` `.active_change` = `<change>`; `$OPENSPEC show <change> --json --deltas-only`) — especially scheduled/async behaviour and `NFR-AVL-*` / `NFR-PERF-*` — and the `[backend]` / `[ops]` job tasks in `openspec/changes/<change>/tasks.md`. Conventions and `OPENSPEC`: `.claude/skills/build-product-v2/openspec-conventions.md`. Append a task (and a delta if behaviour is new) before building a job that maps to none.
 2. Read the codebase for operations that should be async:
    - Email sending (calls to `contract.email.provider`)
    - AI API calls (`contract.ai.provider`)
@@ -218,14 +218,15 @@ For jobs with status tracking, add a status endpoint:
 2. Write integration tests for the queue → handler → result flow.
 3. Test retry behavior: simulate failures, verify retries and backoff.
 4. Test scheduled job registration.
+   - Tag each test that verifies a requirement with its ID in the title (`it('@FR-ING-01 › Scheduled load runs', …)`).
 5. Run the full test suite via `Bash`. If any test fails:
    - Diagnose → fix → re-run (repeat until green)
-6. Confirm 0 failures before committing.
+6. Confirm 0 failures before committing, then tick each job task `- [x]` in tasks.md.
 
 ## Git Commit & Push
 
 ```
-git add src/lib/jobs/ package.json
+git add src/lib/jobs/ package.json openspec/changes/<change>/tasks.md
 git add -u
 git commit -m "feat: add background job processing with queues and scheduled tasks"
 git push origin HEAD 2>/dev/null || git push --set-upstream origin HEAD 2>/dev/null || true

@@ -175,6 +175,13 @@ feature_flags:
 storage:
   blobs: provider-native       # gcs or s3
   cdn: provider-native         # cloud-cdn or cloudfront
+
+tooling:
+  openspec:
+    tool: "@fission-ai/openspec"   # spec-driven requirements; see build-product-v2/openspec-conventions.md
+    version: 1.15.0                # pinned exactly; bump deliberately
+    invoke: npx --yes @fission-ai/openspec@1.15.0
+    telemetry: off                 # OPENSPEC_TELEMETRY=0 DO_NOT_TRACK=1 OPENSPEC_NO_UPDATE_CHECK=1
 ```
 
 ### Scale-tier deltas
@@ -323,11 +330,17 @@ Stack version pins are reviewed each quarter. Next review: <YYYY-MM-DD + 90 days
 | db-migrator | database (engine, version, pgvector) |
 | ux-designer | frontend.css, frontend.ui_kit |
 | api-docs | backend.validators, backend.framework |
+| e2e-tester | testing.e2e, runtime.package_manager |
+| perf-tester | testing.load |
+| security-auditor | security.*, auth.*, not_in_stack |
+| adversarial-tester | testing.property, testing.mutation, testing.unit |
+| reviewer | whole contract (stack conformance), not_in_stack |
+| dogfood | frontend.framework, runtime.package_manager, testing.e2e |
 | email-templates | email |
 | background-jobs | queue, cache |
 | analytics | analytics |
 | observability | observability, ai (token metrics) |
-| cicd | ci |
+| cicd | ci, runtime, tooling.openspec |
 | deployer | deploy, cloud, iac |
 | auth-engineer | auth, security |
 | ai-features | ai (provider, models, vector_store, eval) |
@@ -342,8 +355,8 @@ Before committing, re-read the resolved contract and check:
 - [ ] Every override has a one-line rationale.
 - [ ] Tier deltas applied (toy ≠ launch).
 - [ ] No constraint flag dropped on the floor.
-- [ ] No vendor named that the org doesn't have credentials for (check `~/.bashrc` env vars referenced in the contract).
-- [ ] Versions are pinned to majors (not "latest").
+- [ ] No vendor named that the org doesn't have credentials for (check `./.bashrc` env vars referenced in the contract).
+- [ ] Versions are pinned to majors (not "latest"); `tooling.*` entries (e.g. `tooling.openspec`) are pinned exactly.
 - [ ] `not_in_stack` is non-empty (declares at least 3 retired defaults).
 
 If any check fails, mark the doc `Status: DRAFT` and surface the gap.

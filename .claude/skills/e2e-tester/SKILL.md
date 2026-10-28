@@ -11,19 +11,23 @@ You are a senior QA engineer specializing in end-to-end testing. Your job is to 
 
 ## Phase 1 — Read Context
 
-1. Read `docs/02-system-requirements.md` for use cases and acceptance criteria.
-2. Read `docs/01b-product-spec.md` (if exists) for user stories and Gherkin criteria.
-3. Read `docs/03-system-design.md` for API endpoints and page routes.
-4. Read `docs/03b-ux-design.md` (if exists) for page flows and responsive breakpoints.
-5. Scan the codebase with `Glob` to understand the page/route structure.
+Follow `.claude/skills/build-product-v2/openspec-conventions.md` (§6 test tagging). `OPENSPEC` is defined there (§2); the active change is `state/state.json` `.active_change` (`<change>`).
+
+1. Read `docs/00-tech-stack.md` for `testing.e2e` and `runtime.package_manager` (`<pm>` below — never assume npm).
+2. Primary source: the requirement scenarios — `$OPENSPEC list --specs --json`, then `$OPENSPEC show <cap> --type spec --json` for each capability in `openspec/specs/**`, and `$OPENSPEC show <change> --json --deltas-only` for the active change. Collect every `#### Scenario:` of every `Priority: M` and `S` requirement (ID, scenario name, WHEN/THEN).
+3. Read `docs/01b-product-spec.md` (if exists) for personas.
+4. Read `docs/03-system-design.md` for API endpoints and page routes.
+5. Read `docs/03b-ux-design.md` (if exists) for page flows and responsive breakpoints.
+6. Read the `[e2e]` tasks in `openspec/changes/<change>/tasks.md`.
+7. Scan the codebase with `Glob` to understand the page/route structure.
 
 ## Phase 2 — Setup Playwright
 
 1. Check if Playwright is already installed: `npx playwright --version 2>/dev/null`.
 2. If not installed:
    ```bash
-   npm install -D @playwright/test
-   npx playwright install chromium
+   <pm> add -D @playwright/test        # npm: npm install -D @playwright/test
+   <pm> exec playwright install chromium
    ```
 3. Create `playwright.config.ts`:
    ```typescript
@@ -33,7 +37,11 @@ You are a senior QA engineer specializing in end-to-end testing. Your job is to 
      testDir: './e2e',
      timeout: 30000,
      retries: 1,
-     reporter: [['html', { open: 'never' }], ['list']],
+     reporter: [
+       ['html', { open: 'never' }],
+       ['list'],
+       ['json', { outputFile: 'reports/test-results/playwright.json' }], // read by the traceability gate
+     ],
      use: {
        baseURL: 'http://localhost:3000',
        screenshot: 'only-on-failure',
@@ -44,7 +52,7 @@ You are a senior QA engineer specializing in end-to-end testing. Your job is to 
        { name: 'mobile', use: { viewport: { width: 375, height: 667 } } },
      ],
      webServer: {
-       command: 'npm run dev',
+       command: '<pm> run dev',
        port: 3000,
        reuseExistingServer: true,
        timeout: 60000,
@@ -55,7 +63,9 @@ You are a senior QA engineer specializing in end-to-end testing. Your job is to 
 
 ## Phase 3 — Write Test Suites
 
-Create test files organized by feature area:
+**Requirement scenarios first.** Write one Playwright test per `#### Scenario:` of every `Priority: M` and `S` requirement, titled `@<ID> › <scenario name>` (e.g. `test('@FR-PLAN-04 › Drag a nomination onto an empty end', …)`), grouped in one `e2e/<capability>.spec.ts` per capability. The GIVEN/WHEN/THEN bullets are the test steps and assertions. Then add the cross-cutting suites below, tagging any test that also verifies a requirement.
+
+Create the remaining test files by feature area:
 
 ### 3a. Authentication (`e2e/auth.spec.ts`)
 - Registration with valid data → redirects to dashboard/onboarding
@@ -89,7 +99,7 @@ Create test files organized by feature area:
 - Filtering and search return correct results
 
 ### Test Writing Rules:
-- Use descriptive test names: `test('user can create a project with valid details', ...)`
+- Requirement tests use `@<ID> › <scenario name>` titles; other tests use descriptive names: `test('user can create a project with valid details', ...)`
 - Use Page Object Model or test fixtures for reusable actions (login, create record)
 - Create a `e2e/fixtures/` directory with helper functions
 - Use `test.describe` blocks to group related tests
@@ -101,19 +111,23 @@ Create test files organized by feature area:
 
 ```
 LOOP:
-  1. Run the test suite: npx playwright test
+  1. Run the test suite: <pm> exec playwright test
   2. If tests fail:
      a. Read the failure output and trace
      b. Determine if the failure is:
         - A real bug in the application → fix the source code
         - A test issue (wrong selector, timing) → fix the test
-        - A missing feature → note it and skip the test with test.skip('reason')
-     c. Re-run the failing tests: npx playwright test --grep "test name"
+        - A missing feature on a Priority M requirement → do NOT skip; route it to the implementer:
+          scripts/route-failure.sh --gate e2e --area <path> (the test stays failing until fixed)
+        - A missing feature on a Priority S/C requirement → test.skip('reason') is allowed, reason required
+     c. Re-run the failing tests: <pm> exec playwright test --grep "@FR-XXX-NN"
      d. Go to step 1
-  3. If all tests pass: proceed to Phase 5
+  3. If all tests pass: tick each `[e2e]` task `- [x]` in tasks.md and proceed to Phase 5
 ```
 
 ## Phase 5 — Write Test Report
+
+Run `scripts/spec-coverage.sh` (it reads `reports/test-results/playwright.json` and writes `docs/11-traceability.md`). Any `Priority: M` requirement it reports uncovered goes back to Phase 3/4.
 
 Write `docs/08-e2e-test-report.md`:
 
@@ -126,11 +140,13 @@ Write `docs/08-e2e-test-report.md`:
 - Skipped: X (with reasons)
 - Failed: 0
 
-## Coverage by Feature
-| Feature | Tests | Status |
-|---------|-------|--------|
-| Authentication | X | ✅ |
-| [Feature] | X | ✅ |
+## Coverage by requirement
+Full matrix: [docs/11-traceability.md](11-traceability.md) (from `scripts/spec-coverage.sh`).
+
+| Requirement | Priority | Scenarios | Tests | Status |
+|-------------|----------|-----------|-------|--------|
+| FR-AUTH-01 | M | 2 | 2 | ✅ |
+| [ID] | M/S | X | X | ✅ |
 
 ## User Flows Tested
 1. [Flow description] — ✅
@@ -142,8 +158,8 @@ Write `docs/08-e2e-test-report.md`:
 | ... | ... | ... | ... |
 
 ## Gaps / Skipped Tests
-| Test | Reason |
-|------|--------|
+| Test | Priority (S/C only) | Reason |
+|------|-------------------------|--------|
 | ... | ... |
 
 ## Responsive Testing
@@ -156,7 +172,7 @@ Write `docs/08-e2e-test-report.md`:
 ## Git Commit & Push
 
 ```
-git add e2e/ playwright.config.ts docs/08-e2e-test-report.md package.json
+git add e2e/ playwright.config.ts docs/08-e2e-test-report.md docs/11-traceability.md package.json openspec/changes/<change>/tasks.md
 git commit -m "feat: add Playwright E2E test suite with full coverage"
 git push origin HEAD 2>/dev/null || git push --set-upstream origin HEAD 2>/dev/null || true
 ```

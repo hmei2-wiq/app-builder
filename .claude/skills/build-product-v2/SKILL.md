@@ -1,7 +1,7 @@
 ---
 name: build-product-v2
-description: Default product builder. State-machine orchestrator with critic gates, scale-tier branching, and per-phase subagent contexts. Spawns general-purpose subagents that each invoke a single named skill (differentiation, pricing, dogfood, etc.).
-argument-hint: "<product idea>"
+description: Default product builder. Spec-driven (OpenSpec) state-machine orchestrator with critic gates, scale-tier branching, and per-phase subagent contexts. Starts from an idea, or from an existing requirements doc with --from-spec. Spawns general-purpose subagents that each invoke a single named skill (differentiation, pricing, dogfood, etc.).
+argument-hint: "<product idea> | --from-spec <requirements doc>"
 allowed-tools: Task, Skill, WebSearch, WebFetch, Read, Write, Edit, Bash, Glob, Grep
 effort: max
 ---
@@ -18,6 +18,17 @@ waterfall.
 
 **Product idea:** $ARGUMENTS
 
+If `$ARGUMENTS` starts with `--from-spec <path>`, the build starts from
+that requirements document (Phase 0.5 `spec-ingest`) instead of market
+research.
+
+**Spec-driven.** Requirements, tasks and their tests follow
+`.claude/skills/build-product-v2/openspec-conventions.md`. The first
+build is one OpenSpec change (`mvp`, or `import-<slug>` with
+`--from-spec`), proposed and validated before any code, applied by the
+implementers, gated by `spec-validate` + `traceability`, and archived
+into `openspec/specs/` at ship. Every later iteration is another change.
+
 ---
 
 ## Operating principles
@@ -31,7 +42,7 @@ waterfall.
    return structured summaries that the orchestrator merges into state.
 3. **Wedge is law.** After Phase 2, every subsequent subagent receives
    `docs/01c-wedge.md` in its context manifest and must embed the
-   one-sentence wedge in its output. Out-of-wedge work → `[V2]`.
+   one-sentence wedge in its output. Out-of-wedge work → `Wedge: v2`.
 4. **Critic gate at every boundary.** Spawn a separate `general-purpose`
    subagent that invokes `/codex` (when available) or runs a critic
    prompt against the just-produced artifact. Different subagent =
@@ -47,6 +58,11 @@ waterfall.
    gate is a separate hard pass.
 8. **No ops bloat.** Default scale tier is `preview`. Most products
    ship without Terraform, BullMQ, or a PRR.
+9. **Spec is law.** Requirements live in OpenSpec. No implementation
+   subagent writes code that maps to no task in the active change's
+   `tasks.md`; no test that verifies a requirement lacks its `@<ID>`
+   tag; nobody edits `openspec/specs/` except `openspec archive`.
+   Deviations become delta edits in the active change, re-validated.
 
 ---
 
@@ -166,6 +182,10 @@ Schema (defaults from the script):
     "stack_version": null
   },
   "current_phase": "ceo",
+  "source_spec": null,
+  "product_type": "saas",
+  "active_change": null,
+  "archived_changes": [],
   "phase_status": {},
   "critic_verdicts": {},
   "kill_switches": [],
@@ -186,7 +206,11 @@ to append a one-line ADR.
 ```mermaid
 stateDiagram-v2
   [*] --> bootstrap
-  bootstrap --> ceo
+  bootstrap --> ceo: idea
+  bootstrap --> spec_ingest: --from-spec
+  spec_ingest --> ingest_critic
+  ingest_critic --> human_checkpoint_1: pass
+  ingest_critic --> spec_ingest: fail
   ceo --> ceo_critic
   ceo_critic --> differentiation: pass
   ceo_critic --> ceo: fail
@@ -199,14 +223,17 @@ stateDiagram-v2
   human_checkpoint_1 --> differentiation: revise
 
   tech_stack_selector --> stack_critic
-  stack_critic --> product_spec: pass
+  stack_critic --> product_spec: pass (idea)
+  stack_critic --> designer: pass (from-spec; specs already ingested)
   stack_critic --> tech_stack_selector: fail
 
   product_spec --> spec_critic
   spec_critic --> analyst: pass
   spec_critic --> product_spec: fail
 
-  analyst --> designer
+  analyst --> analyst_critic
+  analyst_critic --> designer: pass (validate --strict ok)
+  analyst_critic --> analyst: fail
   designer --> design_critic
   design_critic --> ux_designer: pass
   design_critic --> designer: fail
@@ -262,7 +289,8 @@ stateDiagram-v2
   reviewer --> launch_branch
 
   state launch_branch <<choice>>
-  launch_branch --> pricing_positioning
+  launch_branch --> pricing_positioning: product_type=saas
+  launch_branch --> legal_compliance: product_type=internal
   pricing_positioning --> human_checkpoint_3
   human_checkpoint_3 --> landing_page
   landing_page --> legal_compliance
@@ -275,7 +303,8 @@ stateDiagram-v2
   ops_phases --> rollback_setup
   rollback_setup --> preview_ship
   preview_ship --> human_checkpoint_4
-  human_checkpoint_4 --> analytics: GO
+  human_checkpoint_4 --> archive_change: GO
+  archive_change --> analytics
   analytics --> [*]
 ```
 
@@ -284,39 +313,48 @@ stateDiagram-v2
 ## Per-phase context manifests
 
 The orchestrator passes each subagent only these docs (the prompt
-template's "context manifest" slot).
+template's "context manifest" slot). Every manifest after
+`tech-stack-selector` also includes
+`.claude/skills/build-product-v2/openspec-conventions.md`.
+
+Shorthand: **specs** = `openspec/specs/**` (current truth);
+**Δ** = the active change `openspec/changes/<active_change>/`
+(`proposal.md`, `specs/**` deltas, `design.md`, `tasks.md`);
+**tasks** = Δ `tasks.md`.
 
 | Phase | Reads | Writes |
 |---|---|---|
 | `ceo` | product idea | `01-market-analysis.md` |
 | `differentiation` | `01` | `01c-wedge.md` (now incl. Stack constraints) |
+| `spec-ingest` (`--from-spec`) | source doc | Δ (`import-<slug>`: proposal, deltas, design OQs), `01b`, `01c` (DRAFT) |
 | `tech-stack-selector` | `01c`, `state.json` | `00-tech-stack.md` |
-| `product-spec` | `00`, `01`, `01c` | `01b-product-spec.md` |
-| `analyst` | `00`, `01`, `01b`, `01c` | `02-system-requirements.md` |
-| `designer` | `00`, `01b`, `01c`, `02` | `03-system-design.md` |
-| `ux-designer` | `00`, `01b`, `01c`, `03` | `03b-ux-design.md` |
-| `auth-engineer` | `00`, `01c`, `02`, `03` | auth code, `04-dev-plan.md` |
-| `email-templates` (conditional) | `00`, `01b`, `02`, `03`, `03b` | email service, templates |
-| `ai-features` (conditional) | `00`, `01c`, `02`, `03` | `src/lib/ai/`, `src/prompts/`, `evals/` |
-| `backend-developer` | `00`, `01c`, `02`, `03` | code, `04-dev-plan.md` |
-| `frontend-developer` | `00`, `01c`, `03`, `03b` | code |
-| `db-migrator` | `00`, `03` | migrations, seed |
-| `api-docs` | code, `02`, `03` | `07-api-reference.md`, `openapi.yaml` |
-| `e2e-tester` | code, `02`, `03b` | `e2e/`, `playwright.config.ts` |
-| `adversarial-tester` | code, `02` | `tests/adversarial/`, `08b` |
-| `security-auditor` | code, `00`, `03` | `09-security-audit.md` |
-| `dogfood` | running app, `01c`, `03b` | `dogfood/`, `dogfood/iter-N.md` |
-| `perf-tester` (launch+) | code, `02`, `03` | `10-performance-report.md`, k6 tests |
-| `reviewer` (launch+) | full repo, `02`, `03` | `05-code-review.md` |
-| `pricing` | `01`, `01b`, `01c` | `16-pricing.md` |
-| `positioning` | `01c`, `01b`, `16` | `17-positioning.md` |
-| `landing-page` | `00`, `01c`, `03b`, `16`, `17` | landing page code |
-| `legal-compliance` | `00`, `01b`, `01c`, `02`, `03` | legal pages, consent banner |
-| `cicd` | `00`, `03`, `04` | `.buildkite/` (or `.github/workflows/`), `Dockerfile` |
+| `product-spec` | `00`, `01`, `01c`, specs | `01b-product-spec.md`, Δ `proposal.md` |
+| `analyst` | `00`, `01`, `01b`, `01c`, specs, Δ `proposal.md` | Δ `specs/**`, Δ `design.md` (Open Questions) |
+| `designer` | `00`, `01b`, `01c`, specs, Δ | `03-system-design.md`, Δ `design.md`, tasks |
+| `ux-designer` | `00`, `01b`, `01c`, `03`, specs, Δ | Figma, `03b-ux-design.md` |
+| `auth-engineer` | `00`, `01c`, `03`, specs, Δ | auth code, Δ `design.md`, ticks `[auth]` tasks |
+| `email-templates` (conditional) | `00`, `01b`, `03`, `03b`, specs, Δ | email service, templates, ticks `[email]` tasks |
+| `ai-features` (conditional) | `00`, `01c`, `03`, `16`, specs, Δ | `src/lib/ai/`, `src/prompts/`, `evals/`, ticks `[ai]` tasks |
+| `backend-developer` | `00`, `01c`, `03`, specs, Δ | code + tagged tests, ticks `[backend]` tasks |
+| `frontend-developer` | `00`, `01b`, `01c`, `03`, `03b`, `07`, specs, Δ | code + tagged tests, ticks `[frontend]` tasks |
+| `db-migrator` | `00`, `03`, specs, Δ | migrations, seed, ticks `[db]` tasks |
+| `api-docs` | code, `03`, specs, Δ | `07-api-reference.md`, `openapi.yaml` |
+| `e2e-tester` | code, `00`, `01b`, `03`, `03b`, specs, Δ | `e2e/` (one test per scenario), `playwright.config.ts` |
+| `adversarial-tester` | code, `03`, specs, Δ | `tests/adversarial/`, `08b` |
+| `security-auditor` | code, `00`, `03`, specs | `09-security-audit.md` |
+| `dogfood` | running app, `01c`, `03b`, `16`, specs | `docs/dogfood/iteration-N.md`, `dogfood/*.png` |
+| `perf-tester` (launch+) | code, `03`, specs | `10-performance-report.md`, k6 tests |
+| `reviewer` (launch+) | full repo, `03`, specs, `11` | `05-code-review.md` |
+| `pricing` (saas) | `01`, `01b`, `01c` | `16-pricing.md` |
+| `positioning` (saas) | `01c`, `01b`, `16` | `17-positioning.md` |
+| `landing-page` (saas) | `00`, `01c`, `03b`, `16`, `17` | landing page code |
+| `legal-compliance` | `00`, `01b`, `01c`, `03`, specs | legal pages, consent banner |
+| `cicd` | `00`, `03`, tasks | `.buildkite/` (or `.github/workflows/`), `Dockerfile` |
 | `deployer` | `00`, `03`, `state.json` | `infra/` or `vercel.json`/`fly.toml` |
 | `rollback` (launch+) | `00`, `03`, deploy state | rollback runbook, deploy verification hooks |
-| `observability` (launch+) | `00`, `02`, `03` | logging, health checks, dashboards |
-| `signal-iterate` | analytics + `01c` | `iteration-N/...` |
+| `observability` (launch+) | `00`, `03`, specs | logging, health checks, dashboards |
+| `signal-iterate` | analytics, `01c`, `01b`, specs | `docs/iteration-N/...`, its own change Δ |
+| `iterate` | `01`, `03`, specs, `11` | `06-gap-analysis.md`, its own change Δ |
 
 ---
 
@@ -327,7 +365,47 @@ template's "context manifest" slot).
 mkdir -p state docs
 scripts/state-init.sh "$ARGUMENTS"
 git init 2>/dev/null || true
+
+# OpenSpec: CLI pinned, telemetry off (egress is default-deny).
+export OPENSPEC_TELEMETRY=0 DO_NOT_TRACK=1 OPENSPEC_NO_UPDATE_CHECK=1
+OPENSPEC="npx --yes @fission-ai/openspec@1.15.0"
+[[ -d openspec ]] || $OPENSPEC init --tools claude,gemini --no-animation .
 ```
+
+Then write `openspec/config.yaml` from
+`openspec-conventions.md` §8 (overwrite the generated one; keep
+`schema: spec-driven`), and set the first change:
+
+```bash
+if [[ "$ARGUMENTS" == --from-spec* ]]; then
+  SOURCE="${ARGUMENTS#--from-spec }"
+  scripts/state-set.sh '.source_spec' "\"$SOURCE\""
+  # active_change is set by spec-ingest (import-<slug>)
+else
+  scripts/state-set.sh '.active_change' '"mvp"'
+fi
+```
+
+`openspec init` also installs the `/opsx:*` commands and
+`openspec-*` skills; the pipeline does not call them, but they are
+there for humans working on the same repo.
+
+### Phase 0.5 — `spec-ingest` (only with `--from-spec`)
+Subagent, skill `spec-ingest`, manifest `[source doc]`, model
+`sonnet`, args `$SOURCE`. It writes the `import-<slug>` change
+(proposal, deltas, design.md Open Questions, `ingest-report.md`),
+`docs/01b-product-spec.md`, and a DRAFT `docs/01c-wedge.md`; it sets
+`.active_change` and `.product_type`.
+
+Then `ingest_critic` (model `opus`), checklist below. On pass, go to
+**human checkpoint 1**, which for `--from-spec` also shows the open
+`OQ-` items that block `Priority: M` requirements, and asks the user to
+answer or defer each. Answers are written into the deltas (remove the
+`[NEEDS CLARIFICATION]` marker, adjust the requirement) and logged with
+`scripts/state-decide.sh spec-ingest "<OQ-NN answered>" "<answer>"`.
+
+From-spec builds skip `ceo`, `differentiation`, `product-spec` and
+`analyst`: after `stack_critic` passes they go straight to `designer`.
 
 ### Phase 1 — `ceo`
 Spawn a subagent using the template above with:
@@ -396,7 +474,7 @@ scripts/state-set.sh '.tech_stack.ai_heavy'     "$([[ -n \"$(yq '.ai.cost_tracki
 ### Phase 2.7c — `stack_critic`
 Critic spawn against `docs/00-tech-stack.md`, model `opus` (different
 from selector's `sonnet`). Pass criteria:
-- Versions pinned to majors (no "latest")
+- Versions pinned to majors (no "latest"); `tooling.*` pinned exactly
 - `not_in_stack` non-empty (≥ 3 retired defaults)
 - Every override has a one-line rationale
 - All constraint flags from `01c-wedge.md` are addressed
@@ -406,30 +484,48 @@ from selector's `sonnet`). Pass criteria:
 Fail → loop to `tech-stack-selector` with `must_fix` as input.
 
 ### Phase 3 — `product-spec`
-Subagent, skill `product-spec`, manifest `[00, 01, 01c]`, model `sonnet`.
-Hard cap: one critical flow + 3 supporting; rest tagged `[V2]`.
+Subagent, skill `product-spec`, manifest `[00, 01, 01c, specs]`, model `sonnet`.
+Hard cap: one critical flow + 3 supporting; rest `Wedge: v2`. Writes
+`01b` and opens the `mvp` change's `proposal.md`.
 
 ### Phase 4 — `analyst`
-Subagent, skill `analyst`, manifest `[01, 01b, 01c]`, model `sonnet`.
-Every FR tagged `[wedge-critical]`, `[wedge-supporting]`, or
-`[Out-of-wedge → V2]`.
+Subagent, skill `analyst`, manifest `[00, 01, 01b, 01c, specs, Δ proposal]`,
+model `sonnet`. Writes one delta spec per proposal capability; every
+requirement has an ID, `Priority`, `Wedge` tag and ≥ 1 scenario.
+
+### Phase 4c — `analyst_critic`
+Orchestrator first runs the hard check, then spawns the critic (model
+`opus`):
+
+```bash
+$OPENSPEC validate "$(jq -r .active_change state/state.json)" --strict --no-interactive \
+  && scripts/spec-coverage.sh --no-write --json | jq -e '(.unidentified | length) == 0 and ([.requirements[] | select(.state == "no-priority")] | length) == 0'
+```
+
+Validation failure → loop to `analyst` with the validator output as
+`must_fix` (no critic spawn needed).
 
 ### Phase 5 — `designer`
-Subagent, skill `designer`, manifest `[01b, 01c, 02]`, model `opus`.
+Subagent, skill `designer`, manifest `[00, 01b, 01c, specs, Δ]`, model `opus`.
+Writes `docs/03-system-design.md`, Δ `design.md` and Δ `tasks.md`.
 Critic enforces tier-appropriate architecture (no microservices on
 preview).
 
 ### Phase 6 — `ux-designer`
-Subagent, skill `ux-designer`, manifest `[01b, 01c, 03]`, model `sonnet`.
+Subagent, skill `ux-designer`, manifest `[00, 01b, 01c, 03, specs, Δ]`, model `sonnet`.
 Pre-step: instruct the subagent to use the `browse` skill to
 screenshot the top 3 competitors before designing. Critic uses the
 `plan-design-review` rubric (≥ 7 across all dimensions).
 
 ### Phase 6.5 — Human checkpoint 2
-Surface design target before building.
+Surface design target before building, plus the spec summary:
+requirements by capability and priority, and every open `OQ-` that
+blocks a `Priority: M` requirement. Answers are written into the
+deltas and re-validated before Phase 6.7. No code is written while a
+Must requirement carries `[NEEDS CLARIFICATION]`.
 
 ### Phase 6.7 — `auth-engineer` (NEW, sequential before fan-out)
-Subagent, skill `auth-engineer`, manifest `[00, 01c, 02, 03]`,
+Subagent, skill `auth-engineer`, manifest `[00, 01c, 03, specs, Δ]`,
 model `sonnet`. Scaffolds auth per `contract.auth.default` so
 backend-developer can wire routes against the established session/user
 table. Skipped if `contract.auth.default: hand-rolled-jwt` (legacy
@@ -437,21 +533,22 @@ path; backend-developer owns it).
 
 ### Phase 6.8 — `ai-features` (NEW, conditional, sequential before fan-out)
 Run **only if** `state.tech_stack.ai_heavy == true` (set during Phase
-2.7). Subagent, skill `ai-features`, manifest `[00, 01c, 02, 03]`,
+2.7). Subagent, skill `ai-features`, manifest `[00, 01c, 03, 16, specs, Δ]`,
 model `opus` (taste-heavy). Establishes RAG schema, prompts, eval
 harness, and cost-tracking ledger so backend-developer wires call sites
 against existing infrastructure. If `ai_heavy: false`, skip silently.
 
 ### Phase 6.9 — `email-templates` (NEW, conditional, sequential before fan-out)
-Run only if `docs/01b-product-spec.md` mentions transactional emails
-(verification, password reset, notifications, digests). Detect with:
+Run only if the product spec or the requirements mention transactional
+emails (verification, password reset, notifications, digests). Detect with:
 
 ```bash
-grep -iE 'email|verification|password reset|notification|digest' docs/01b-product-spec.md \
+grep -riE 'email|verification|password reset|notification|digest' \
+  docs/01b-product-spec.md "openspec/changes/$(jq -r .active_change state/state.json)/specs" \
   && state.email_needed=true || state.email_needed=false
 ```
 
-Subagent, skill `email-templates`, manifest `[00, 01b, 02, 03, 03b]`,
+Subagent, skill `email-templates`, manifest `[00, 01b, 03, 03b, specs, Δ]`,
 model `haiku`. Configures the provider per `contract.email.provider`
 (default Resend), generates templates per `contract.email.templates`
 (default React Email), so backend-developer can call a working
@@ -467,6 +564,19 @@ Emit three `Task` calls in **one message**:
 Each writes its `phase_status` field. Wait for all three to return.
 All three read `docs/00-tech-stack.md` as their first action and refuse
 to introduce vendors not in the contract.
+
+Each subagent's prompt names the task IDs it owns, by owner tag in
+Δ `tasks.md` (`[backend]`, `[frontend]`, `[db]`):
+
+```bash
+grep -E '^- \[ \] [0-9]+\.[0-9]+ \[backend\]' "openspec/changes/$CHANGE/tasks.md"
+```
+
+**Post-condition (HARD), all three:** the phase is `done` only if
+every task with its owner tag is ticked `- [x]`. An unticked task is
+`failed`, not `done`: re-spawn with the unticked list. Before the join
+completes, re-run `$OPENSPEC validate "$CHANGE" --strict --no-interactive`
+— implementers may have edited deltas.
 
 **`db-migrator` post-condition (HARD):** the phase is only `done` if
 `state/artifacts/db-migrator.json` exists AND every required path it
@@ -484,7 +594,7 @@ catches the "phantom artifact" failure mode where a subagent narrates
 "seed shipped" but never wrote the file.
 
 ### Phase 7.5 — `api-docs` (NEW, sequential after impl join)
-Subagent, skill `api-docs`, manifest `[code, 02, 03]`, model `haiku`.
+Subagent, skill `api-docs`, manifest `[code, 03, specs, Δ]`, model `haiku`.
 Scans the now-implemented routes, extracts validators and types, and
 writes `docs/07-api-reference.md` + `openapi.yaml`. The frontend code
 already exists at this point — `api-docs` is documenting reality, not
@@ -492,10 +602,11 @@ specifying it. Subsequent `frontend-developer` reruns (e.g. from
 `route-failure.sh`) will read this if they need API shapes.
 
 ### Phase 7.7 — `e2e-tester` (NEW, sequential before quality gates)
-Subagent, skill `e2e-tester`, manifest `[code, 02, 03b]`, model
-`sonnet`. Generates a Playwright suite covering the wedge workflow plus
-auth, error states, and responsive layouts. Without this, the `e2e`
-quality gate has nothing to run.
+Subagent, skill `e2e-tester`, manifest `[code, 00, 01b, 03, 03b, specs, Δ]`, model
+`sonnet`. Generates a Playwright suite with one test per requirement
+scenario (`@<ID> › <scenario>`) plus auth, error states, and responsive
+layouts, and writes Playwright JSON to `reports/test-results/`. Without
+this, the `e2e` and `traceability` gates have nothing to check.
 
 The skill iterates until all generated tests pass against the local
 dev server. If a test fails because a feature is broken (not the
@@ -506,6 +617,11 @@ the appropriate implementer.
 ```bash
 scripts/quality-gates.sh
 ```
+Gate order starts with `spec-validate` (OpenSpec `--strict` over all
+specs and active changes) and runs `traceability`
+(`scripts/spec-coverage.sh`: every `Priority: M` requirement has a
+passing tagged test, no orphan tags) right after `e2e`.
+
 Exit code = number of failed gates. On any failure:
 ```bash
 OWNER=$(scripts/route-failure.sh --gate <gate> --area <path>)
@@ -514,16 +630,16 @@ Re-spawn that owner skill with the failing test output as input.
 After 3 failed attempts on the same gate, surface to user.
 
 ### Phase 9 — `adversarial-tester`
-Subagent, skill `adversarial-tester`, manifest `[code, 02, 03]`, model `opus`.
+Subagent, skill `adversarial-tester`, manifest `[code, 03, specs, Δ]`, model `opus`.
 Different model from the implementer to break monoculture. Re-run
 quality gates after.
 
 ### Phase 10 — `security-auditor`
-Subagent, skill `security-auditor`. Tier gate: `preview` → Critical/High
+Subagent, skill `security-auditor`, manifest `[code, 00, 03, specs]`. Tier gate: `preview` → Critical/High
 only; `launch+` → full OWASP ASVS.
 
 ### Phase 11 — `dogfood` (NEW)
-Subagent, skill `dogfood`, manifest `[01c, 03b]`, model `opus`.
+Subagent, skill `dogfood`, manifest `[01c, 03b, 16, specs]`, model `opus`.
 The skill returns a verdict. Routing:
 - `BLOCKED` → loop to `db-migrator` (seed gate failed at Phase 1.5;
   re-run `seed-integrity` quality gate after the loop)
@@ -534,13 +650,13 @@ The skill returns a verdict. Routing:
 
 ### Phase 11.5 — `perf-tester` (NEW, launch+ only)
 Run only if `state.scale_tier in {launch, scale}`. Subagent, skill
-`perf-tester`, manifest `[code, 02, 03]`, model `sonnet`. Generates k6
+`perf-tester`, manifest `[code, 03, specs]`, model `sonnet`. Generates k6
 load tests against the wedge workflow, scans Prisma queries for N+1
 patterns, checks for missing DB indexes, captures bundle-size
 baselines, and writes `docs/10-performance-report.md`.
 
 Hard-fail criteria:
-- p95 latency on the wedge workflow > 2× the NFR target
+- p95 latency on the wedge workflow > 2× the `NFR-PERF-*` target
 - Any N+1 query on a hot path
 - Bundle size > 1.5× the prior baseline (from `benchmark` if present)
 
@@ -552,7 +668,7 @@ is sufficient at those scales.
 
 ### Phase 11.7 — `reviewer` (NEW, launch+ only)
 Run only if `state.scale_tier in {launch, scale}`. Subagent, skill
-`reviewer`, manifest `[full repo, 02, 03]`, model `opus` (different
+`reviewer`, manifest `[full repo, 03, specs, 11]`, model `opus` (different
 from per-artifact critics — full-repo cross-cutting view). Writes
 `docs/05-code-review.md`.
 
@@ -570,7 +686,9 @@ Findings are auto-fixed iteratively (read the SKILL.md — it loops on
 each issue). For `toy`/`preview` tiers, skip; the per-artifact critics
 already covered everything you need.
 
-### Phase 12 — `pricing` + `positioning` (PARALLEL)
+### Phase 12 — `pricing` + `positioning` (PARALLEL; `product_type: saas` only)
+Skipped, along with Phases 12.5 and 13, when `state.product_type ==
+"internal"` (an internal tool has no price, headline or landing page).
 Two `Task` calls in one message:
 - `pricing` (sonnet, manifest `[01, 01b, 01c]`)
 - `positioning` (sonnet, manifest `[01c, 01b, 16]` — runs after `pricing`)
@@ -585,7 +703,7 @@ Surface tiers, prices, trial mechanic, headline. Confirm or revise.
 Subagent, skill `landing-page`, manifest `[01c, 03b, 16, 17]`, model `sonnet`.
 
 ### Phase 13.5 — `legal-compliance` (NEW, always for any public deploy)
-Subagent, skill `legal-compliance`, manifest `[00, 01b, 01c, 02, 03]`,
+Subagent, skill `legal-compliance`, manifest `[00, 01b, 01c, 03, specs]`,
 model `haiku`. Generates privacy policy, terms of service, cookie
 consent banner, GDPR data-access/deletion endpoints
 (`DELETE /api/auth/account`, `GET /api/auth/export`), and acceptable
@@ -624,7 +742,7 @@ orchestrator does not need a separate phase for them.
 Subagent, skill `rollback`, manifest `[00, 03, deploy state]`, model
 `haiku`. Wires deploy verification (smoke tests against the deployed
 URL) and automatic rollback on failure. Captures the current revision
-in `/tmp/rollback-target.env` pre-deploy; if smoke tests fail
+in `./state/rollback-target.env` pre-deploy; if smoke tests fail
 post-deploy, rolls back to the captured revision via
 `gcloud run services update-traffic` (GCP) or
 `aws ecs update-service` (AWS).
@@ -685,7 +803,27 @@ Phase 7, so reaching Phase 19 without a manifest is a bug.
 Then run a canary check (spawn `qa` subagent against the deployed URL).
 
 ### Phase 19.5 — Human checkpoint 4
-GO/NO-GO before public exposure.
+GO/NO-GO before public exposure. Show the traceability summary from
+`docs/11-traceability.md` (Must covered N/M) and any Should/Could
+requirements left untested.
+
+### Phase 19.7 — Archive the change (orchestrator, on GO)
+The build's change becomes the baseline spec:
+
+```bash
+CHANGE=$(jq -r .active_change state/state.json)
+scripts/quality-gates.sh --only spec-validate,traceability   # must be green
+$OPENSPEC archive "$CHANGE" --yes
+scripts/state-set.sh '.archived_changes' "$(jq -c --arg c "$CHANGE" '.archived_changes + [$c]' state/state.json)"
+scripts/state-set.sh '.active_change' 'null'
+scripts/state-decide.sh archive "archived $CHANGE" "shipped; deltas merged into openspec/specs/"
+scripts/spec-coverage.sh    # refresh docs/11-traceability.md against the merged specs
+```
+
+If archive fails (a delta no longer applies), fix the delta, re-run
+`spec-validate`, and archive again. Never archive with `--no-validate`.
+After this point every change to behaviour goes through `iterate` or
+`signal-iterate`, each with its own change.
 
 ### Phase 20 — `analytics` + handoff to `signal-iterate`
 Instrument the wedge workflow only. Schedule:
@@ -712,7 +850,7 @@ Instrument the wedge workflow only. Schedule:
 - [ ] Stack constraints section present (Phase 5b); each `true` flag justified
 
 ### `tech-stack-selector` critic
-- [ ] Versions pinned to majors (no "latest")
+- [ ] Versions pinned to majors (no "latest"); `tooling.*` pinned exactly
 - [ ] `not_in_stack` non-empty (≥ 3 retired defaults)
 - [ ] Every default-override has a one-line rationale
 - [ ] All `true` constraints from `01c-wedge.md` translated into overrides
@@ -723,13 +861,34 @@ Instrument the wedge workflow only. Schedule:
 ### `product-spec` critic
 - [ ] Exactly one critical flow
 - [ ] ≤ 3 supporting flows
-- [ ] All else `[V2]`-tagged
+- [ ] All else `Wedge: v2`-tagged
+- [ ] Every story has a `US-<AREA>-NN` ID and draft WHEN/THEN acceptance
+- [ ] Δ `proposal.md` lists one capability per epic, durable names (not work items)
 - [ ] KPIs measurable, not aspirational
+
+### `analyst` critic (after `openspec validate --strict` passes)
+- [ ] Every story in `01b` is covered by ≥ 1 requirement (`Source: US-…`)
+- [ ] One behaviour per requirement; no "and/or" bundles
+- [ ] Every NFR has a number and a measurement condition in its scenario
+- [ ] Every requirement has error/unauthorised scenarios where it applies, not only the happy path
+- [ ] `Wedge` tags match `01c-wedge.md`; `Wedge: v2` ⇒ `Priority: C`
+- [ ] No `Priority: M` requirement carries `[NEEDS CLARIFICATION]` without an `OQ-` entry in Δ `design.md`
+
+### `spec-ingest` critic (`--from-spec`)
+- [ ] `ingest-report.md` "Not converted" is empty or every row has a reason
+- [ ] Every source requirement ID appears as a requirement header (spot-check 10 against the source text: meaning unchanged)
+- [ ] Source priorities kept (latest review value); every ⚠️/TBD has an `OQ-`
+- [ ] Verification columns became concrete scenarios, not "Test"
+- [ ] `01c-wedge.md` claims only what the source states; stack flags quote the source
+- [ ] `product_type` and scale tier justified
 
 ### `designer` critic
 - [ ] Architecture matches scale tier (preview ≠ microservices)
 - [ ] Justification for every "we chose X over Y"
 - [ ] Each NFR tied to an architectural decision
+- [ ] §10 traceability matrix has a row per `Priority: M` requirement
+- [ ] Every `Priority: M` requirement is in a Δ `tasks.md` `implements:` list
+- [ ] Every task has an owner tag and `implements:` IDs that exist
 
 ### `ux-designer` critic
 - [ ] Competitor teardown present (≥ 3 products)
@@ -756,6 +915,13 @@ Instrument the wedge workflow only. Schedule:
 | Failure | Route to |
 |---|---|
 | Critic rejects spec/wedge | last passing producer |
+| `openspec validate --strict` fails on Δ (Phase 4c) | `analyst` (or `spec-ingest` for `--from-spec`) |
+| Quality gate: spec-validate | `route-failure.sh --gate spec-validate` → `analyst` |
+| Quality gate: traceability | `route-failure.sh --gate traceability --area <path>` → `e2e-tester` (Must scenario with no test), the implementer (tagged test fails), `analyst` (header without ID/Priority) |
+| Implementer phase leaves owned tasks unticked | same implementer, with the unticked task list |
+| Implementation must deviate from a requirement | implementer edits the Δ delta (MODIFIED) + re-validates; critic re-runs on the changed requirements |
+| Open `OQ-` blocks a `Priority: M` requirement | `AskUserQuestion` at the next human checkpoint (no code for it until answered) |
+| `openspec archive` fails | fix the delta that no longer applies → `spec-validate` → archive again |
 | Quality gate: typecheck/lint | `route-failure.sh --gate <g> --area <path>` |
 | Quality gate: seed-integrity | `db-migrator` (manifest mismatch / phantom artifact) |
 | Quality gate: mutation | `adversarial-tester` |
@@ -778,10 +944,10 @@ user** via `AskUserQuestion`. This is the safety valve.
 
 ## Mandatory human-in-the-loop checkpoints
 
-1. **After `differentiation`** — wedge + ICP + tier confirm
-2. **After `ux-designer`** — competitive teardown + design target
-3. **After `pricing` + `positioning`** — tiers + headline
-4. **At preview-ship** — GO/NO-GO before public URL
+1. **After `differentiation`** (or `spec-ingest`) — wedge + ICP + tier confirm; for `--from-spec`, also the open `OQ-` items blocking Must requirements
+2. **After `ux-designer`** — competitive teardown + design target + spec summary and remaining blocking `OQ-`s
+3. **After `pricing` + `positioning`** — tiers + headline (`product_type: saas` only)
+4. **At preview-ship** — GO/NO-GO before public URL, with the traceability summary; GO archives the change
 
 These are non-skippable in v2. Use `AskUserQuestion`.
 
@@ -794,7 +960,7 @@ Pass `model=` to each `Task` call:
 | Phases | Model |
 |---|---|
 | `ceo`, `differentiation`, `designer`, `dogfood`, `adversarial-tester`, `ai-features`, `reviewer` (all need taste/reasoning) | opus |
-| `tech-stack-selector`, `product-spec`, `analyst`, `ux-designer`, `auth-engineer`, `backend-developer`, `frontend-developer`, `e2e-tester`, `perf-tester`, `pricing`, `positioning`, `signal-iterate`, `observability`, `iterate` | sonnet |
+| `tech-stack-selector`, `spec-ingest`, `product-spec`, `analyst`, `ux-designer`, `auth-engineer`, `backend-developer`, `frontend-developer`, `e2e-tester`, `perf-tester`, `pricing`, `positioning`, `signal-iterate`, `observability`, `iterate` | sonnet |
 | `api-docs`, `env-manager`, `email-templates`, `db-migrator`, `cicd`, `legal-compliance`, `rollback` | haiku |
 
 **Critic** always runs on a *different* model from the producer, to
@@ -804,8 +970,10 @@ break monoculture.
 
 ## Prompt-cache strategy
 
-The six "always-read" docs (`00`, `01`, `01b`, `01c`, `02`, `03`) form
-a stable prefix from the tech-stack-selector phase onward. `00` (the
+The "always-read" docs (`00`, `openspec-conventions.md`, `01`, `01b`,
+`01c`, `03`) form a stable prefix from the tech-stack-selector phase
+onward. `openspec/specs/**` changes only at archive, so it extends the
+prefix; the active change Δ goes last because it is still moving. `00` (the
 tech-stack contract) goes first because every implementation skill
 reads it first. List them in the same order in every subagent's
 context manifest so the cache hits. Don't interpolate per-phase data
@@ -830,6 +998,9 @@ Loops taken:     <list of (phase, count)>
 Critic gates:    <pass/fail counts>
 Quality gates:   <which passed, which were waived and why>
 Dogfood health:  <final score>
+Spec:            <change> archived; <N> capabilities, <N> requirements (M/S/C)
+Traceability:    Must covered <n>/<m> (docs/11-traceability.md)
+Open questions:  <OQ ids deferred, with owners>
 Preview URL:     <or "local-only">
 Next steps:      <iterate cadence; what kill switch to watch>
 
@@ -847,7 +1018,11 @@ Append a one-line entry to `docs/06-iteration-log.md` as iteration 0.
 ## Design principles
 
 - **Wedge-driven** — every phase reads `01c-wedge.md`; out-of-wedge
-  work is auto-tagged `[V2]`.
+  work is tagged `Wedge: v2`.
+- **Spec-driven (OpenSpec)** — requirements are proposed and validated
+  before code, implemented task by task, proven by tagged tests
+  (`traceability` gate), and archived into `openspec/specs/` at ship.
+  Iterations are changes, not appendices.
 - **Subagent isolation** — fresh `general-purpose` subagent per phase
   invokes a single skill via `Skill`. No more 200K-token monolithic
   context by Phase 20.
@@ -860,7 +1035,8 @@ Append a one-line entry to `docs/06-iteration-log.md` as iteration 0.
 - **Model routing** — Opus for taste, Sonnet for volume, Haiku for
   mechanical work.
 - **Real scripts** — `state-init.sh`, `state-set.sh`, `state-decide.sh`,
-  `quality-gates.sh`, `route-failure.sh` are actual files in `scripts/`.
+  `quality-gates.sh`, `route-failure.sh`, `spec-coverage.sh` are actual
+  files in `scripts/`.
 
 See `docs/00-pipeline-research-and-redesign.md` for the rationale and
 remaining backlog.

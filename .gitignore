@@ -1,3 +1,10 @@
 .claude/scheduled_tasks.lock
 *:Zone.Identifier
 .sensitive
+# Project-local shell env with CI/cloud tokens (see docs/USER-MANUAL.md)
+/.bashrc
+# Run outputs: quality-gate logs, Lighthouse, test-runner JSON
+/reports/
+# Transient pipeline files
+/state/rollback-target.env
+/state/ingest-*.txt

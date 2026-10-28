@@ -33,7 +33,7 @@ If `ci.provider: none` (typically `toy` tier), exit with status `Deferred`.
 
 ## Environment
 
-The following are available in `~/.bashrc`:
+The following are available in `./.bashrc`:
 - `$BK_API_TOKEN` — Buildkite API token
 - `$BUILDKITE_ORG` — Buildkite organization slug (haiyuan-mei)
 - `$DOCKER_USERNAME` — Docker Hub username
@@ -45,7 +45,7 @@ If `ci.provider: github-actions`, expect `GH_TOKEN` instead. If
 
 ## Phase 1 — Read Context
 
-1. Read `docs/00-tech-stack.md`, `docs/03-system-design.md` (deployment topology), `docs/04-dev-plan.md` (test/build commands).
+1. Read `docs/00-tech-stack.md` (`ci.*`, `runtime.*`, `tooling.openspec`), `docs/03-system-design.md` (deployment topology), and the active change's `openspec/changes/<change>/tasks.md` (`[ops]` tasks; change name in `state/state.json` `.active_change`). Test/build commands come from `package.json` and `scripts/quality-gates.sh`.
 2. Read `package.json` (or equivalent for the contract's runtime) for scripts and dependencies.
 3. Identify project root.
 
@@ -75,6 +75,10 @@ steps:
       - label: ":test: Unit Tests"
         command: <pkg-mgr> ci && <pkg-mgr> run test
         artifact_paths: "coverage/**/*"
+      - label: ":clipboard: Spec & Traceability"
+        command: <pkg-mgr> ci && scripts/quality-gates.sh --only spec-validate,traceability
+        env: { OPENSPEC_TELEMETRY: "0", DO_NOT_TRACK: "1", OPENSPEC_NO_UPDATE_CHECK: "1" }
+        artifact_paths: "docs/11-traceability.md;state/artifacts/traceability.json"
 
   - wait: ~
 
@@ -104,6 +108,8 @@ steps:
 ```
 
 Substitute `<pkg-mgr>` with `contract.runtime.package_manager`.
+
+The Spec & Traceability step (present in every provider below) runs `openspec validate --all --strict` and `scripts/spec-coverage.sh` via the gate runner, so a PR blocks when a spec is invalid or a `Priority: M` requirement has no passing tagged test (see `.claude/skills/build-product-v2/openspec-conventions.md` §6). It runs after the test step so runner JSON reports exist; swap in the full `scripts/quality-gates.sh` if CI should run every gate.
 
 Create the pipeline via the Buildkite API:
 
@@ -140,6 +146,8 @@ jobs:
       - run: <pkg-mgr> ci
       - run: <pkg-mgr> run lint
       - run: <pkg-mgr> run test
+      - run: scripts/quality-gates.sh --only spec-validate,traceability
+        env: { OPENSPEC_TELEMETRY: "0", DO_NOT_TRACK: "1", OPENSPEC_NO_UPDATE_CHECK: "1" }
   build-and-push:
     needs: lint-test
     if: github.ref == 'refs/heads/main'
@@ -179,6 +187,7 @@ lint-test:
     - <pkg-mgr> ci
     - <pkg-mgr> run lint
     - <pkg-mgr> run test
+    - OPENSPEC_TELEMETRY=0 DO_NOT_TRACK=1 OPENSPEC_NO_UPDATE_CHECK=1 scripts/quality-gates.sh --only spec-validate,traceability
 build-image:
   stage: build
   image: docker:latest

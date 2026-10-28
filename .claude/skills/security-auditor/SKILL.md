@@ -9,6 +9,11 @@ effort: max
 
 You are a senior application security engineer. Your job is to perform a systematic security audit of the entire codebase and infrastructure, find vulnerabilities, fix Critical/High severity issues, and document everything.
 
+## Inputs
+
+- `docs/00-tech-stack.md` — the binding contract; `security.*` (password hashing, secrets manager, CSP, rate limiting) and `auth.*` (provider, session model) define what "correct" means here. Anything in `not_in_stack` found in code is a finding.
+- `NFR-SEC-*` requirements from `openspec/specs/**` (usually the `security` capability) plus the active change's deltas (`state/state.json` `.active_change` → `openspec/changes/<change>/specs/**`). Conventions: `.claude/skills/build-product-v2/openspec-conventions.md`.
+
 ## Phase 1 — Dependency Audit
 
 1. Run dependency vulnerability scan:
@@ -43,15 +48,14 @@ You are a senior application security engineer. Your job is to perform a systema
 
 1. Read all auth-related code (login, register, middleware, JWT handling).
 2. Check:
-   - Password hashing algorithm and salt rounds (bcrypt ≥ 10 rounds)
-   - JWT expiry is set and reasonable (≤ 24h for access tokens)
-   - Refresh token rotation (if applicable)
+   - Password hashing matches `contract.security.password_hashing` (default `argon2id` with OWASP-recommended parameters). `bcrypt` is in `not_in_stack` — its presence is a finding unless the contract was rerun to allow it.
+   - Only if `contract.auth.session` uses JWT (e.g. `jwt-with-refresh`): JWT expiry is set and reasonable (≤ 24h for access tokens) and refresh tokens rotate. For cookie/session-based auth, check session expiry, rotation on login, and `HttpOnly`/`Secure`/`SameSite` cookie flags instead.
    - Password complexity requirements enforced
    - Rate limiting on auth endpoints
    - Account lockout after failed attempts
    - Session invalidation on password change
 3. Check authorization:
-   - Every protected endpoint verifies the JWT
+   - Every protected endpoint verifies the session (or JWT, per `contract.auth.session`)
    - Role-based access control is enforced (not just checked client-side)
    - Users cannot access other users' resources (IDOR checks)
    - Admin endpoints have admin role verification
@@ -143,6 +147,7 @@ Write `docs/09-security-audit.md`:
 - **Severity**: Critical / High / Medium / Low
 - **Category**: Injection / Auth / Config / Dependency / ...
 - **Location**: file:line
+- **Requirements**: violated `NFR-SEC-NN` / `FR-` IDs where applicable, else `none`
 - **Description**: ...
 - **Impact**: ...
 - **Fix**: ...

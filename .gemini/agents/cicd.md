@@ -49,7 +49,7 @@ If `ci.provider: none` (typically `toy` tier), exit with status `Deferred`.
 
 ## Environment
 
-The following are available in `~/.bashrc`:
+The following are available in `./.bashrc`:
 - `$BK_API_TOKEN` — Buildkite API token
 - `$BUILDKITE_ORG` — Buildkite organization slug (haiyuan-mei)
 - `$DOCKER_USERNAME` — Docker Hub username

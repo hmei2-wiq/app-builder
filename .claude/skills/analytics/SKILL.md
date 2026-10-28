@@ -24,7 +24,7 @@ If the contract is missing, stop and emit:
 
 ## Phase 1 — Read Context
 
-1. Read `docs/00-tech-stack.md`, `docs/01b-product-spec.md`, `docs/01-market-analysis.md`, `docs/01c-wedge.md`, `docs/02-system-requirements.md`, `docs/03b-ux-design.md` (if exists).
+1. Read `docs/00-tech-stack.md`, `docs/01b-product-spec.md`, `docs/01-market-analysis.md`, `docs/01c-wedge.md`, `docs/03b-ux-design.md` (if exists), and the requirements in `openspec/specs/**` plus the active change's deltas (`state/state.json` `.active_change`) — tracked events map to the `FR-` IDs of the wedge workflow steps they measure.
 
 ## Phase 2 — Define Tracking Plan
 

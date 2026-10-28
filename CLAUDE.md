@@ -13,17 +13,18 @@ and per-phase subagent contexts. See
 ## Pipeline architecture (one-screen overview)
 
 ```
+(--from-spec <doc>: spec-ingest → [HUMAN] → tech-stack-selector → designer …)
 ceo → differentiation → [HUMAN] → tech-stack-selector → product-spec
   → analyst → designer → ux-designer → [HUMAN]
   → auth-engineer → (email-templates if needed) → (ai-features if ai_heavy)
   → [backend + frontend + db-migrator]  (parallel)
   → api-docs → e2e-tester
-  → quality-gates (typecheck → lint → unit → mutation → integration → contract → e2e → a11y → lighthouse → visual)
+  → quality-gates (spec-validate → typecheck → lint → unit → mutation → integration → contract → e2e → traceability → a11y → lighthouse → visual)
   → adversarial-tester → security-auditor → dogfood
   → (launch+ only: perf-tester → reviewer)
   → pricing → positioning → [HUMAN] → landing-page → legal-compliance
   → (launch+ only: background-jobs → env-manager → cicd → deployer → observability → rollback → production-readiness)
-  → preview-ship → [HUMAN] → analytics
+  → preview-ship → [HUMAN] → openspec archive → analytics
   → signal-iterate (recurring)
 ```
 
@@ -34,6 +35,14 @@ human checkpoint and writes `docs/00-tech-stack.md` — the binding
 contract every downstream skill reads. CI/CD defaults to **Buildkite**
 (cost-effective; org has `$BK_API_TOKEN`); GitHub Actions / GitLab CI
 are alternatives, opted into via the contract.
+
+**Spec contract (SDD / OpenSpec):** requirements live in
+`openspec/specs/<capability>/spec.md`; every build or iteration is one
+change in `openspec/changes/<name>/` (proposal → delta specs → design →
+tasks), validated `--strict` before code, implemented task by task,
+proven by `@<ID>`-tagged tests (`traceability` gate), and archived at
+ship. `docs/02-system-requirements.md` and `docs/04-dev-plan.md` are
+retired. Rules: `.claude/skills/build-product-v2/openspec-conventions.md`.
 
 Each `→` between two strategic artifacts has a critic gate (different
 model from the producer). The four boxes marked HUMAN in
@@ -60,6 +69,9 @@ Live in `scripts/`. The orchestrator and skills assume they exist.
 - `state-set.sh '<jq path>' '<json value>'` — atomic field write
 - `state-decide.sh <phase> "<decision>" "<reason>"` — append ADR
 - `quality-gates.sh [--only x,y] [--skip z] [--keep-going]` — layered hard gates
+  (starts with `spec-validate`; `traceability` runs after `e2e`)
+- `spec-coverage.sh [--json] [--no-write]` — requirement ↔ test traceability;
+  writes `docs/11-traceability.md`
 - `route-failure.sh --gate <g> --area <path>` — map failure → owner skill
 - `shipworthy-scan.sh <url> [--json]` — passive security audit of a deployed
   app (leaked secrets, Supabase RLS-off, open APIs, headers, source maps); the
@@ -67,7 +79,8 @@ Live in `scripts/`. The orchestrator and skills assume they exist.
 - `cogs-model.sh [--sweep]` — PLG free→paid unit-economics model; the Phase 2
   go/no-go gate for the self-serve tier
 
-All are bash + jq, no Node deps. Tests live in `scripts/test/*.test.sh`.
+All are bash + jq, no Node deps (the `spec-validate` gate runs the pinned
+OpenSpec CLI via `npx`). Tests live in `scripts/test/*.test.sh`.
 
 ## Skills inventory
 
@@ -76,6 +89,7 @@ the design rationale, and the open backlog.
 
 New (round 1 + round 2): `differentiation`, `pricing`, `positioning`,
 `adversarial-tester`, `dogfood`, `signal-iterate`, `build-product-v2`.
+Round 3 (SDD): `spec-ingest` (existing PRD → OpenSpec change).
 
 ## Notes for collaboration
 
