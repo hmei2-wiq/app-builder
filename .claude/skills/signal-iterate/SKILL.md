@@ -8,6 +8,13 @@ effort: max
 
 # Role: Signal-Driven Iteration Engineer
 
+> **Context files may live elsewhere.** Resolve each `openspec/context/<name>.md`
+> path below with `scripts/context-path.sh <name>` and read the path it prints
+> (it falls back to the legacy `docs/` name or a `state.json` `.context_paths`
+> override). Exit 1 means the file is missing: apply this skill's missing-file
+> rule. Before writing one, run `scripts/context-path.sh --move <name>`.
+> Conventions: `.claude/skills/build-product-v2/openspec-conventions.md` §1.
+
 You are running the iteration loop *after* the product is in front of
 real users. Unlike the original `iterate` skill (which re-scans the
 market and runs gap analysis from imagination), you start from
@@ -30,21 +37,38 @@ the whole point.
 ## Inputs
 
 Required:
-- `docs/01c-wedge.md` — wedge sentence, ICP, kill switches
-- `docs/01b-product-spec.md` — KPI targets
+- `openspec/context/wedge.md` — wedge sentence, ICP, kill switches
+- `openspec/context/product.md` — KPI targets
 - `openspec/specs/**` — current requirements (`openspec list --specs --json`);
   conventions in `.claude/skills/build-product-v2/openspec-conventions.md`
 - A deployed product with at least one real signal source wired
 
 Recommended:
-- `docs/06-iteration-log.md` — prior iterations
+- The last archived signal change (`openspec/changes/archive/*-iter-*-signal-*/`)
+  — its `proposal.md` Success Metric (query, predicted lift, kill
+  criterion) is what this run measures first
 - `state/state.json` — KPI targets, kill switches
 - Environment variables: `POSTHOG_API_KEY`, `SENTRY_API_TOKEN`,
   `SUPPORT_INBOX_URL` (where applicable)
 
 ---
 
-## Phase 0 — Signal Source Discovery
+## Phase 0 — Open the Change, Discover Signal Sources
+
+Everything this run produces lives in one OpenSpec change
+(conventions: `.claude/skills/build-product-v2/openspec-conventions.md`
+§1, §4). It is opened now under a provisional name and renamed in
+Phase 4 once the one change is known.
+
+```bash
+export OPENSPEC_TELEMETRY=0 DO_NOT_TRACK=1 OPENSPEC_NO_UPDATE_CHECK=1
+OPENSPEC="npx --yes @fission-ai/openspec@1.15.0"
+N=$(( $(ls -d openspec/changes/archive/*-iter-* 2>/dev/null | wc -l) + 1 ))
+CHANGE="iter-$N-signal"
+$OPENSPEC new change "$CHANGE"
+scripts/state-set.sh '.active_change' "\"$CHANGE\""
+REPORTS="openspec/changes/$CHANGE/reports"; mkdir -p "$REPORTS"
+```
 
 Detect available signal sources. For each, record availability and
 freshness in `state/signals.json`:
@@ -74,7 +98,7 @@ Pull these for the last 14 days (configurable):
 
 ### 1a. Wedge funnel performance
 
-The wedge workflow from `01c-wedge.md` is a funnel. For each step,
+The wedge workflow from `openspec/context/wedge.md` is a funnel. For each step,
 fetch the conversion rate from the previous step. Flag any step with
 < 50% step-conversion as a leak.
 
@@ -86,7 +110,7 @@ Top three leaks become candidate problems.
 
 ### 1b. Activation event hit-rate
 
-The activation event from `16-pricing.md` Phase 4 is the moment of
+The activation event from `openspec/context/pricing.md` Phase 4 is the moment of
 proven value. Cohort by signup-day; what fraction reach activation
 within 24h, 72h, 7d?
 
@@ -109,7 +133,16 @@ Watch (read transcripts of) 10 sessions of users who:
 Note: this requires PostHog session recordings or equivalent. If not
 wired, skip and note `[Sampled = 0]`.
 
-Write findings to `docs/iteration-N/signals-behavior.md`.
+### 1e. Previous change outcome
+
+If a previous signal change exists, run its Success Metric query and
+record the measured lift against its predicted lift and kill
+criterion. A lift below the kill criterion makes reverting that change
+a candidate in Phase 4. (The archived change is never edited; its
+outcome is recorded here.)
+
+Write findings to `$REPORTS/signals-behavior.md`, starting with
+`## Previous change outcome`.
 
 ---
 
@@ -134,7 +167,7 @@ For each top issue, classify:
 | **Cosmetic** | Add to backlog |
 | **Third-party flake** | Suppress filter; do not iterate |
 
-Write to `docs/iteration-N/signals-failure.md`.
+Write to `$REPORTS/signals-failure.md`.
 
 ---
 
@@ -150,7 +183,7 @@ For each channel available:
 The thing to watch for: **the same complaint phrased three different
 ways**. That is a real signal. A complaint mentioned once is noise.
 
-Write to `docs/iteration-N/signals-voice.md`.
+Write to `$REPORTS/signals-voice.md`.
 
 ---
 
@@ -171,45 +204,72 @@ matrix (1–5 each), pick the highest impact / lowest effort, and
 write down explicitly *why the other two were rejected this iteration*
 (not "we'll get to them" — *why* they're not the answer).
 
-Output to `docs/iteration-N/the-one-change.md`:
+Name the slug and rename the change (before any validate):
+
+```bash
+mv "openspec/changes/$CHANGE" "openspec/changes/iter-$N-signal-<slug>"
+CHANGE="iter-$N-signal-<slug>"; REPORTS="openspec/changes/$CHANGE/reports"
+scripts/state-set.sh '.active_change' "\"$CHANGE\""
+```
+
+Then write `openspec/changes/$CHANGE/proposal.md` (conventions §5) —
+this is the only place the one change is written down:
 
 ```markdown
-## The One Change — Iteration N
+# Proposal
 
-### Proposed change
-<one paragraph>
-
-### Funnel step it targets
-<step name from wedge workflow>
-
-### Predicted lift
-<X percentage points, with reasoning>
+## Why
+<wedge sentence> — <leaking funnel step: current % → target %; links to reports/signals-*.md>
 
 ### Rejected alternatives (and why not now)
 1. <alt 1> — rejected because <reason>
 2. <alt 2> — rejected because <reason>
 
-### Success metric
-<the specific PostHog query that will tell us this worked>
+## What Changes
+- <the one change, one paragraph or story line>
 
-### Kill criterion
-<the lift threshold below which we revert>
+## Capabilities
+### New Capabilities
+### Modified Capabilities
+- `<capability>`: <what requirement changes>
+
+## Success Metric
+- Funnel step: <step name from wedge workflow>
+- Predicted lift: <X pp, with reasoning>
+- Query: <PostHog HogQL or insight URL — filled in Phase 7>
+- Kill criterion: <lift threshold below which we revert>
+
+## Impact
+<surfaces touched>
 ```
 
 ---
 
 ## Phase 5 — Kill Switch Check
 
-Re-read kill switches from `01c-wedge.md`. For each:
+Re-read kill switches from `openspec/context/wedge.md`. For each:
 
 - **Demand kill** — do current signals trip it? (e.g. trial-to-paid
   rate below threshold for 30 days)
 - **Build kill** — has the wedge workflow proven undeliverable?
 - **Defensibility kill** — has a top-3 incumbent shipped the wedge?
 
-If any kill switch is tripped, **stop the iteration loop entirely**
-and write `docs/iteration-N/kill-switch-tripped.md` with the
-recommendation: pivot, narrow further, or shut down. Surface to user.
+If any kill switch is tripped, **stop the iteration loop entirely**.
+Record the decision as a no-behaviour change so it sits in history
+with its evidence:
+
+```bash
+mv "openspec/changes/$CHANGE" "openspec/changes/iter-$N-signal-kill-switch"
+CHANGE="iter-$N-signal-kill-switch"
+echo 'skip_specs: true' >> "openspec/changes/$CHANGE/.openspec.yaml"
+```
+
+Write its `proposal.md`: Why = which kill switch tripped and the
+numbers (link `reports/signals-*.md`); What Changes = the
+recommendation (pivot, narrow further, or shut down); no capabilities.
+Validate, surface to the user, and archive with
+`$OPENSPEC archive "$CHANGE" --yes --skip-specs` only after the user
+confirms the decision.
 
 This is the only skill that is allowed to recommend killing the
 project.
@@ -218,19 +278,9 @@ project.
 
 ## Phase 6 — Plan & Implement
 
-The one change is one OpenSpec change, `iter-<N>-signal-<slug>`:
+The one change is the change opened in Phase 0 and named in Phase 4;
+its `proposal.md` is already written.
 
-```bash
-export OPENSPEC_TELEMETRY=0 DO_NOT_TRACK=1 OPENSPEC_NO_UPDATE_CHECK=1
-OPENSPEC="npx --yes @fission-ai/openspec@1.15.0"
-CHANGE="iter-<N>-signal-<slug>"
-$OPENSPEC new change "$CHANGE"
-scripts/state-set.sh '.active_change' "\"$CHANGE\""
-```
-
-- **`proposal.md`** — Why = the leaking funnel step and its numbers;
-  What Changes = the one change; then the Predicted lift, Success
-  metric and Kill criterion copied from `the-one-change.md`.
 - **`specs/<capability>/spec.md`** — the behaviour change as ADDED or
   MODIFIED requirements (`Source: iter-N signal`). A pure copy or
   layout tweak with no behaviour change sets `skip_specs: true` in the
@@ -245,12 +295,14 @@ depending on the change) against the change's tasks. Run quality gates
 When green and deployed:
 
 ```bash
+scripts/spec-coverage.sh && cp reports/traceability.md "$REPORTS/traceability.md"
 $OPENSPEC archive "$CHANGE" --yes        # add --skip-specs if skip_specs: true
 scripts/state-set.sh '.active_change' 'null'
+scripts/state-decide.sh signal-iterate "archived $CHANGE" "<one change; predicted lift>"
 ```
 
-Iteration N+1 writes the measured lift into the archived change's
-`proposal.md` as well as the iteration log.
+Iteration N+1 measures the lift (Phase 1e) and records it in its own
+`reports/signals-behavior.md`; the archived change stays as shipped.
 
 Do NOT bundle other changes into this iteration. Resist scope creep
 — the discipline is half the point.
@@ -263,57 +315,27 @@ Before shipping, add the analytics event that will measure success.
 The success metric from Phase 4 must be queryable in PostHog within
 24 hours of deploy.
 
-Write the exact PostHog query (HogQL or insight URL) into
-`docs/iteration-N/the-one-change.md` Section "Success metric." This
-is what `signal-iterate` iteration N+1 will read first.
+Write the exact PostHog query (HogQL or insight URL) into the
+change's `proposal.md` `## Success Metric` → Query. This is what
+`signal-iterate` iteration N+1 reads first.
 
 ---
 
-## Phase 8 — Iteration Log
+## Phase 8 — Record
 
-Append to `docs/06-iteration-log.md`:
-
-```markdown
-## Iteration N — <YYYY-MM-DD> — signal-driven
-
-### Signal sources used
-- [ ] PostHog
-- [ ] Sentry
-- [ ] Support inbox
-- [ ] NPS
-
-### Top leak identified
-<step, current %, target %>
-
-### The one change
-<one line>
-
-### Predicted lift
-<X pp>
-
-### Rejected alternatives
-<count, with one-line reasons>
-
-### Kill switches checked
-<count tripped, names>
-
-### Status
-<PROPOSED | IMPLEMENTED | DEPLOYED | MEASURED>
-
-### Measured lift (filled in N+1)
-<actual pp once 14 days of data come back>
-```
-
-The "Measured lift" field stays blank this iteration. The next
-iteration's first job is to fill it in — that is how the loop
-self-corrects.
+There is no separate iteration log. The archived change
+(`openspec/changes/archive/<date>-iter-<N>-signal-<slug>/`) holds the
+proposal (one change, rejected alternatives, predicted lift, query,
+kill criterion), the deltas, the tasks and the signal reports. Its
+status is the state of the change: active (proposed / implemented) or
+archived (deployed); the measured lift arrives with iteration N+1.
 
 ---
 
 ## Git Commit & Push
 
 ```bash
-git add docs/iteration-N/ docs/06-iteration-log.md openspec/
+git add openspec/
 git commit -m "feat: iteration N — signal-driven, ship the one change"
 git push origin HEAD 2>/dev/null || git push --set-upstream origin HEAD 2>/dev/null || true
 ```

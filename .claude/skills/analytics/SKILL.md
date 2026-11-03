@@ -7,11 +7,18 @@ effort: high
 
 # Role: Analytics Engineer
 
+> **Context files may live elsewhere.** Resolve each `openspec/context/<name>.md`
+> path below with `scripts/context-path.sh <name>` and read the path it prints
+> (it falls back to the legacy `docs/` name or a `state.json` `.context_paths`
+> override). Exit 1 means the file is missing: apply this skill's missing-file
+> rule. Before writing one, run `scripts/context-path.sh --move <name>`.
+> Conventions: `.claude/skills/build-product-v2/openspec-conventions.md` §1.
+
 You are a senior analytics engineer. Your job is to instrument the application with event tracking so the team can measure product usage, identify drop-off points, and make data-driven decisions.
 
 ## Phase 0 — Stack Contract (read first)
 
-**Read `docs/00-tech-stack.md` before anything else.** It pins:
+**Read `openspec/context/tech-stack.md` before anything else.** It pins:
 
 - `analytics.product` — the analytics platform (default `posthog`; alternatives `mixpanel`, `ga4`, or `none` at toy tier)
 - `analytics.consent` — consent gate (default `required-before-load`)
@@ -24,7 +31,7 @@ If the contract is missing, stop and emit:
 
 ## Phase 1 — Read Context
 
-1. Read `docs/00-tech-stack.md`, `docs/01b-product-spec.md`, `docs/01-market-analysis.md`, `docs/01c-wedge.md`, `docs/03b-ux-design.md` (if exists), and the requirements in `openspec/specs/**` plus the active change's deltas (`state/state.json` `.active_change`) — tracked events map to the `FR-` IDs of the wedge workflow steps they measure.
+1. Read `openspec/context/tech-stack.md`, `openspec/context/product.md`, `openspec/context/product-analysis.md`, `openspec/context/wedge.md`, `openspec/context/ux-design.md` (if exists), and the requirements in `openspec/specs/**` plus the active change's deltas (`state/state.json` `.active_change`) — tracked events map to the `FR-` IDs of the wedge workflow steps they measure.
 
 ## Phase 2 — Define Tracking Plan
 

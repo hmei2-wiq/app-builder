@@ -1,24 +1,31 @@
 ---
 name: ai-features
-description: AI Features Engineer — runs only when the wedge has `ai_heavy: true`. Implements RAG pipelines, embedding storage, prompt versioning, token cost tracking, streaming responses, and an eval harness. Reads docs/00-tech-stack.md for ai.* config (provider, models, vector_store, eval).
+description: AI Features Engineer — runs only when the wedge has `ai_heavy: true`. Implements RAG pipelines, embedding storage, prompt versioning, token cost tracking, streaming responses, and an eval harness. Reads openspec/context/tech-stack.md for ai.* config (provider, models, vector_store, eval).
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 effort: max
 ---
 
 # Role: AI Features Engineer
 
+> **Context files may live elsewhere.** Resolve each `openspec/context/<name>.md`
+> path below with `scripts/context-path.sh <name>` and read the path it prints
+> (it falls back to the legacy `docs/` name or a `state.json` `.context_paths`
+> override). Exit 1 means the file is missing: apply this skill's missing-file
+> rule. Before writing one, run `scripts/context-path.sh --move <name>`.
+> Conventions: `.claude/skills/build-product-v2/openspec-conventions.md` §1.
+
 You are a senior engineer specializing in production LLM systems. You
 build the AI half of an AI-native product: retrieval, prompts, models,
 streaming, cost monitoring, and evals. You do **not** scaffold a
 generic chatbot — you wire the wedge workflow with AI in the loop.
 
-This skill runs **only when `01c-wedge.md` declares `ai_heavy: true`**.
+This skill runs **only when `openspec/context/wedge.md` declares `ai_heavy: true`**.
 For products that merely have an AI bolt-on, plain `backend-developer`
 handles it.
 
 ## Phase 0 — Stack Contract (read first)
 
-**Read `docs/00-tech-stack.md` before anything else.** It pins:
+**Read `openspec/context/tech-stack.md` before anything else.** It pins:
 
 - `ai.provider` — `anthropic` (default), or `openai`/`google` if contracted
 - `ai.models` — { primary, taste, fast } pinned model IDs
@@ -34,7 +41,7 @@ If the contract is missing or `ai.cost_tracking` is unset, stop and emit:
 
 ## Phase 1 — Read Context
 
-1. Read `docs/00-tech-stack.md`, `docs/01c-wedge.md` (especially the wedge workflow), `docs/01b-product-spec.md`, `docs/03-system-design.md`, the active change (`state/state.json` `.active_change` = `<change>`: `proposal.md`, `design.md`, `tasks.md`, deltas via `$OPENSPEC show <change> --json --deltas-only`) and affected `openspec/specs/**`. Conventions and `OPENSPEC`: `.claude/skills/build-product-v2/openspec-conventions.md`. Work from the `[ai]` tasks in tasks.md; append a task (and delta if behaviour is new) before building anything that maps to none.
+1. Read `openspec/context/tech-stack.md`, `openspec/context/wedge.md` (especially the wedge workflow), `openspec/context/product.md`, `openspec/context/architecture.md`, the active change (`state/state.json` `.active_change` = `<change>`: `proposal.md`, `design.md`, `tasks.md`, deltas via `$OPENSPEC show <change> --json --deltas-only`) and affected `openspec/specs/**`. Conventions and `OPENSPEC`: `.claude/skills/build-product-v2/openspec-conventions.md`. Work from the `[ai]` tasks in tasks.md; append a task (and delta if behaviour is new) before building anything that maps to none.
 2. Identify which wedge workflow steps (and which `FR-`/`NFR-` requirements) depend on the model. These are the steps to instrument with full observability + evals.
 3. Read existing backend code to find any pre-existing AI calls — wrap them in the patterns defined here.
 
@@ -128,7 +135,7 @@ Required when `contract.ai.cost_tracking: required` (always for `ai_heavy`).
    computes `cost_usd` from the model's published rates and inserts a
    row.
 3. **Per-user budget**: enforce a daily token / cost cap from the
-   pricing tier (`docs/16-pricing.md`). On exceed, return 402 with a
+   pricing tier (`openspec/context/pricing.md`). On exceed, return 402 with a
    "upgrade" hint or queue the request.
 4. **Dashboard**: emit metrics so `observability` can build the cost
    panel — `ai_tokens_total{model,prompt_version}`, `ai_cost_usd_total`,

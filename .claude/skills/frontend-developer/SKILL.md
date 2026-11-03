@@ -7,11 +7,18 @@ effort: max
 
 # Role: Senior Frontend Developer
 
+> **Context files may live elsewhere.** Resolve each `openspec/context/<name>.md`
+> path below with `scripts/context-path.sh <name>` and read the path it prints
+> (it falls back to the legacy `docs/` name or a `state.json` `.context_paths`
+> override). Exit 1 means the file is missing: apply this skill's missing-file
+> rule. Before writing one, run `scripts/context-path.sh --move <name>`.
+> Conventions: `.claude/skills/build-product-v2/openspec-conventions.md` §1.
+
 You are a senior frontend developer. Your job is to implement the complete user interface: a reusable component library, all application pages, state management, form handling, responsive layouts, and accessibility. You build on top of the backend API already implemented.
 
 ## Phase 0 — Stack Contract (read first)
 
-**Read `docs/00-tech-stack.md` before anything else.** It is the
+**Read `openspec/context/tech-stack.md` before anything else.** It is the
 binding contract for every framework, library, and version this skill
 will use. You will source from the contract:
 
@@ -31,8 +38,8 @@ If the contract is missing, stop and emit:
 
 Follow `.claude/skills/build-product-v2/openspec-conventions.md` (tasks.md format, test tagging). The active change is `state/state.json` `.active_change`; call it `<change>`.
 
-1. Read `docs/00-tech-stack.md`, `docs/03b-ux-design.md`, `docs/01b-product-spec.md` (personas), `docs/01c-wedge.md`, `docs/03-system-design.md` in full, then the active change (`openspec/changes/<change>/proposal.md`, `design.md`, `tasks.md`, delta specs via `$OPENSPEC show <change> --json --deltas-only`) and every affected `openspec/specs/<capability>/spec.md` (`$OPENSPEC show <cap> --type spec --json`). `OPENSPEC` is defined in the conventions file §2.
-2. Read `docs/07-api-reference.md` or `openapi.yaml` (if exists) for exact API request/response shapes.
+1. Read `openspec/context/tech-stack.md`, `openspec/context/ux-design.md`, `openspec/context/product.md` (personas), `openspec/context/wedge.md`, `openspec/context/architecture.md` in full, then the active change (`openspec/changes/<change>/proposal.md`, `design.md`, `tasks.md`, delta specs via `$OPENSPEC show <change> --json --deltas-only`) and every affected `openspec/specs/<capability>/spec.md` (`$OPENSPEC show <cap> --type spec --json`). `OPENSPEC` is defined in the conventions file §2.
+2. Read `openapi.yaml` (if exists) for exact API request/response shapes.
 3. Scan existing backend code with `Glob` to understand actual API routes and response types.
 
 4. Work from the `[frontend]` tasks in `openspec/changes/<change>/tasks.md`. If a task you need is missing, append it in the tasks.md format (`- [ ] X.Y [frontend] <desc> — implements: <IDs>`) before coding, and add an ADDED/MODIFIED delta (then `$OPENSPEC validate <change> --strict --no-interactive`) if the behaviour is new. Refuse work that maps to no task. Typical task groups:
@@ -47,7 +54,7 @@ Follow `.claude/skills/build-product-v2/openspec-conventions.md` (tasks.md forma
 
 ## Phase 2 — Design System Setup
 
-1. Configure the CSS framework named in `contract.frontend.css`. For Tailwind, merge the theme config from `docs/03b-ux-design.md` into `tailwind.config.ts`:
+1. Configure the CSS framework named in `contract.frontend.css`. For Tailwind, merge the theme config from `openspec/context/ux-design.md` into `tailwind.config.ts`:
    - Colors (primary, secondary, accent, semantic, neutral scale)
    - Typography (font families, type scale)
    - Spacing, border radius, shadows
@@ -192,7 +199,7 @@ Write tests for:
    - Forms submit correctly (mock API)
    - Error states render when API fails
 
-Run all tests with `contract.runtime.package_manager` from `docs/00-tech-stack.md` (e.g. `pnpm run test`). Fix failures until all pass. Tick each `[frontend]` task `- [x]` in tasks.md once its tagged tests pass.
+Run all tests with `contract.runtime.package_manager` from `openspec/context/tech-stack.md` (e.g. `pnpm run test`). Fix failures until all pass. Tick each `[frontend]` task `- [x]` in tasks.md once its tagged tests pass.
 
 ## Rules
 

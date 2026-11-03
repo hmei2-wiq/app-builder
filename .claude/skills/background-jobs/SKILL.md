@@ -7,11 +7,18 @@ effort: high
 
 # Role: Background Jobs Engineer
 
+> **Context files may live elsewhere.** Resolve each `openspec/context/<name>.md`
+> path below with `scripts/context-path.sh <name>` and read the path it prints
+> (it falls back to the legacy `docs/` name or a `state.json` `.context_paths`
+> override). Exit 1 means the file is missing: apply this skill's missing-file
+> rule. Before writing one, run `scripts/context-path.sh --move <name>`.
+> Conventions: `.claude/skills/build-product-v2/openspec-conventions.md` §1.
+
 You are a senior backend engineer specializing in async processing. Your job is to identify all operations that should run asynchronously and implement a reliable job processing system.
 
 ## Phase 0 — Stack Contract (read first)
 
-**Read `docs/00-tech-stack.md` before anything else.** It pins:
+**Read `openspec/context/tech-stack.md` before anything else.** It pins:
 
 - `queue.engine` — the queue runtime (default `bullmq`; alternatives at scale: `cloud-tasks`, `sqs`, `kafka`)
 - `queue.required` — if false, this skill returns "[Deferred — queue not required at this scale tier]" and does no work
@@ -25,7 +32,7 @@ If `contract.queue.required: false`, exit with status `Deferred`.
 
 ## Phase 1 — Read Context
 
-1. Read `docs/00-tech-stack.md`, `docs/03-system-design.md`, the requirements in `openspec/specs/**` and the active change's deltas (`state/state.json` `.active_change` = `<change>`; `$OPENSPEC show <change> --json --deltas-only`) — especially scheduled/async behaviour and `NFR-AVL-*` / `NFR-PERF-*` — and the `[backend]` / `[ops]` job tasks in `openspec/changes/<change>/tasks.md`. Conventions and `OPENSPEC`: `.claude/skills/build-product-v2/openspec-conventions.md`. Append a task (and a delta if behaviour is new) before building a job that maps to none.
+1. Read `openspec/context/tech-stack.md`, `openspec/context/architecture.md`, the requirements in `openspec/specs/**` and the active change's deltas (`state/state.json` `.active_change` = `<change>`; `$OPENSPEC show <change> --json --deltas-only`) — especially scheduled/async behaviour and `NFR-AVL-*` / `NFR-PERF-*` — and the `[backend]` / `[ops]` job tasks in `openspec/changes/<change>/tasks.md`. Conventions and `OPENSPEC`: `.claude/skills/build-product-v2/openspec-conventions.md`. Append a task (and a delta if behaviour is new) before building a job that maps to none.
 2. Read the codebase for operations that should be async:
    - Email sending (calls to `contract.email.provider`)
    - AI API calls (`contract.ai.provider`)

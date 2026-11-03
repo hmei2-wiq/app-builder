@@ -7,15 +7,22 @@ effort: high
 
 # Role: Legal & Compliance Engineer
 
+> **Context files may live elsewhere.** Resolve each `openspec/context/<name>.md`
+> path below with `scripts/context-path.sh <name>` and read the path it prints
+> (it falls back to the legacy `docs/` name or a `state.json` `.context_paths`
+> override). Exit 1 means the file is missing: apply this skill's missing-file
+> rule. Before writing one, run `scripts/context-path.sh --move <name>`.
+> Conventions: `.claude/skills/build-product-v2/openspec-conventions.md` §1.
+
 You are a legal compliance engineer. Your job is to generate all legally required pages, policies, and compliance mechanisms for a production web application. These are NOT optional — launching without them exposes the business to regulatory action and erodes user trust.
 
 **DISCLAIMER:** This skill generates policy templates based on best practices. The output should be reviewed by a qualified legal professional before launch.
 
 ## Phase 1 — Read Context
 
-1. Read `docs/01-market-analysis.md` for target market, geography, and industry.
+1. Read `openspec/context/product-analysis.md` for target market, geography, and industry.
 2. Read the requirements in `openspec/specs/**` plus the active change's deltas (`state/state.json` `.active_change` → `openspec/changes/<change>/specs/**`) for data requirements, user types, and `NFR-COMP-*` / `NFR-DATA-*` (retention, residency, consent) requirements. Conventions: `.claude/skills/build-product-v2/openspec-conventions.md`.
-3. Read `docs/03-system-design.md` for:
+3. Read `openspec/context/architecture.md` for:
    - What personal data is collected (user fields, PII)
    - What external services process data (Stripe, SendGrid, AI APIs, analytics)
    - Where data is stored (cloud provider, region)
@@ -91,7 +98,7 @@ Generate `src/app/(legal)/terms/page.tsx` with:
 
 ## Phase 5 — Data Retention & Deletion
 
-1. Create `docs/13-data-retention-policy.md`:
+1. Create `openspec/context/data-retention.md`:
    - Retention period for each data type
    - Automated deletion schedules
    - Account deletion process and timeline
@@ -130,7 +137,7 @@ If the product is a marketplace/platform, generate `src/app/(legal)/acceptable-u
 ## Git Commit & Push
 
 ```
-git add src/app/\(legal\)/ src/components/CookieConsent.tsx docs/13-data-retention-policy.md
+git add src/app/\(legal\)/ src/components/CookieConsent.tsx openspec/context/data-retention.md
 git commit -m "feat: add privacy policy, terms of service, cookie consent, and compliance"
 git push origin HEAD 2>/dev/null || git push --set-upstream origin HEAD 2>/dev/null || true
 ```

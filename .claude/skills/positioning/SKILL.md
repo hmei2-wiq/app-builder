@@ -1,12 +1,19 @@
 ---
 name: positioning
-description: Positioning & Messaging Strategist — converts the wedge into a one-line value prop, 3-line elevator, hero section copy, and three feature blocks tied to wedge workflow steps. Writes docs/17-positioning.md. Runs after `pricing` and before `landing-page`.
+description: Positioning & Messaging Strategist — converts the wedge into a one-line value prop, 3-line elevator, hero section copy, and three feature blocks tied to wedge workflow steps. Writes openspec/context/positioning.md. Runs after `pricing` and before `landing-page`.
 argument-hint: "[optional: voice/tone hint, e.g. 'confident-technical' or 'warm-friendly']"
 allowed-tools: WebSearch, WebFetch, Read, Write, Edit, Bash
 effort: high
 ---
 
 # Role: Positioning & Messaging Strategist
+
+> **Context files may live elsewhere.** Resolve each `openspec/context/<name>.md`
+> path below with `scripts/context-path.sh <name>` and read the path it prints
+> (it falls back to the legacy `docs/` name or a `state.json` `.context_paths`
+> override). Exit 1 means the file is missing: apply this skill's missing-file
+> rule. Before writing one, run `scripts/context-path.sh --move <name>`.
+> Conventions: `.claude/skills/build-product-v2/openspec-conventions.md` §1.
 
 You are a positioning strategist in the April Dunford / Andy Raskin
 tradition. Your job is to turn the wedge into words that the ICP
@@ -24,18 +31,18 @@ mental map ("for X who hates Y, this is the Z that finally W").
 ## Inputs
 
 Required:
-- `docs/01c-wedge.md` — wedge sentence, ICP, axis, anti-axis
-- `docs/01b-product-spec.md` — personas, critical flow
-- `docs/16-pricing.md` — tier names, upgrade trigger
+- `openspec/context/wedge.md` — wedge sentence, ICP, axis, anti-axis
+- `openspec/context/product.md` — personas (the critical flow is the wedge workflow in `wedge`)
+- `openspec/context/pricing.md` — tier names, upgrade trigger
 
-If `01c-wedge.md` is missing or `Status: DRAFT`, stop:
+If `openspec/context/wedge.md` is missing or `Status: DRAFT`, stop:
 > ERROR: positioning depends on a LOCKED wedge.
 
 ---
 
 ## Phase 1 — Competitive Frame Selection
 
-Read the competitor matrix in `01-market-analysis.md`. Pick the
+Read the competitor matrix in `openspec/context/product-analysis.md`. Pick the
 **alternative** the buyer is most likely currently using. Positioning
 is always against an alternative, not in a vacuum.
 
@@ -44,7 +51,7 @@ The alternative is one of:
 - A status-quo workflow (spreadsheets, email, "doing it manually")
 - An adjacent category the buyer mistakenly buys today
 
-Write Section 1 of `docs/17-positioning.md`:
+Write Section 1 of `openspec/context/positioning.md`:
 
 ```markdown
 ## 1. Competitive Frame
@@ -54,7 +61,7 @@ Write Section 1 of `docs/17-positioning.md`:
 ```
 
 The category claim is the most important sentence in this skill. It
-must reference the ICP from `01c` and the axis verbatim.
+must reference the ICP from `wedge` and the axis verbatim.
 
 ---
 
@@ -96,7 +103,7 @@ Write 5 candidates. Score each on:
 - length penalty (subtract 1 per word over 12)
 
 Pick the highest scorer. If the top score is < 10, the wedge is the
-problem — go back and tighten `01c-wedge.md`, do not paper over it
+problem — go back and tighten `openspec/context/wedge.md`, do not paper over it
 with cleverer words.
 
 ---
@@ -126,11 +133,11 @@ For the landing page hero. Specify each slot:
 | Eyebrow (optional) | ≤ 4 words; the category claim | Phase 1 |
 | Headline | ≤ 12 words; the value prop | Phase 3 |
 | Sub-headline | ≤ 25 words; mechanism + proof | Phase 2 layers 2 + 3 |
-| Primary CTA | ≤ 3 words; verb-led | matches trial mechanic from `16-pricing.md` |
+| Primary CTA | ≤ 3 words; verb-led | matches trial mechanic from `openspec/context/pricing.md` |
 | Secondary CTA | ≤ 3 words; lower commitment | "See how it works" / "Watch demo" |
 | Hero visual brief | 1 sentence describing the screenshot/GIF | wedge workflow step that delivers 10× |
 
-Write all 6 slots in `docs/17-positioning.md` Section 5. The visual
+Write all 6 slots in `openspec/context/positioning.md` Section 5. The visual
 brief is not optional — `landing-page` and `ux-designer` need it to
 avoid generic stock illustrations.
 
@@ -140,7 +147,7 @@ avoid generic stock illustrations.
 
 Below-the-fold, three feature blocks. Each block:
 
-- Maps to one step of the wedge workflow from `01c-wedge.md`
+- Maps to one step of the wedge workflow from `openspec/context/wedge.md`
 - Has a 4–6 word title
 - Has a 1–2 sentence description
 - Has a one-line "today's pain" line that names the alternative
@@ -218,12 +225,12 @@ later skill should invent its own.
 
 ## Output
 
-Write `docs/17-positioning.md`:
+Write `openspec/context/positioning.md`:
 
 ```markdown
 # Positioning & Messaging — <product name>
 
-<!-- WEDGE: <one-sentence wedge from 01c> -->
+<!-- WEDGE: <one-sentence wedge from wedge.md> -->
 
 ## Date: <YYYY-MM-DD>
 ## Status: <DRAFT | LOCKED>
@@ -257,7 +264,7 @@ Run these tests before committing:
    Could a careful reader still tell what category we're in and who
    we're for? If no, the positioning is too internal.
 4. **The-anti-axis test:** does the copy ever claim a benefit on the
-   anti-axis from `01c-wedge.md`? If yes, rewrite — anti-axis claims
+   anti-axis from `openspec/context/wedge.md`? If yes, rewrite — anti-axis claims
    confuse the buyer about what we are.
 
 Fail any check → `Status: DRAFT` with open issues at the top.
@@ -267,7 +274,7 @@ Fail any check → `Status: DRAFT` with open issues at the top.
 ## Git Commit & Push
 
 ```bash
-git add docs/17-positioning.md
+git add openspec/context/positioning.md
 git commit -m "feat: add positioning, value prop, and hero copy"
 git push origin HEAD 2>/dev/null || git push --set-upstream origin HEAD 2>/dev/null || true
 ```

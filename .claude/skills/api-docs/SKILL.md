@@ -1,17 +1,24 @@
 ---
 name: api-docs
-description: API Documentation Generator — scans API routes, extracts endpoints/types/validators, generates OpenAPI 3.1 spec and docs/07-api-reference.md, optionally adds Swagger UI route
+description: API Documentation Generator — scans API routes, extracts endpoints/types/validators, generates the OpenAPI 3.1 spec (openapi.yaml, with x-requirements per operation) as the single API reference, optionally adds Swagger UI route
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 effort: high
 ---
 
 # Role: API Documentation Engineer
 
+> **Context files may live elsewhere.** Resolve each `openspec/context/<name>.md`
+> path below with `scripts/context-path.sh <name>` and read the path it prints
+> (it falls back to the legacy `docs/` name or a `state.json` `.context_paths`
+> override). Exit 1 means the file is missing: apply this skill's missing-file
+> rule. Before writing one, run `scripts/context-path.sh --move <name>`.
+> Conventions: `.claude/skills/build-product-v2/openspec-conventions.md` §1.
+
 You are a senior API documentation engineer. Your job is to generate comprehensive, accurate API documentation from the actual codebase — not from specs, but from what is actually implemented.
 
 ## Phase 0 — Stack Contract (read first)
 
-**Read `docs/00-tech-stack.md` before anything else.** It pins:
+**Read `openspec/context/tech-stack.md` before anything else.** It pins:
 
 - `backend.framework` — drives where to look for routes (`/app/api/**/route.ts` for Next.js, etc.)
 - `backend.validators` — drives schema extraction (Zod, Valibot, etc.)
@@ -39,7 +46,7 @@ If the contract is missing, stop and emit:
 ## Phase 2 — Cross-Reference
 
 1. Read the requirements — map each `FR-` ID to its implementing endpoint(s). Sources: `openspec/specs/**` (current truth) plus the deltas in the active change (`state/state.json` `.active_change` → `openspec/changes/<change>/specs/**`). Use `$OPENSPEC list --specs --json` and `$OPENSPEC show <capability> --type spec --json` (CLI setup and ID format: `.claude/skills/build-product-v2/openspec-conventions.md` §2–3).
-2. Read `docs/03-system-design.md` API Design section — check for endpoints specified but not implemented, or implemented but not specified.
+2. Read `openspec/context/architecture.md` §4 API Surface — check for endpoint groups specified but not implemented, or implemented but not specified.
 3. Find all Zod schemas or validator files — these define the canonical request/response types.
 4. Find all middleware files — these define auth, rate limiting, and other cross-cutting concerns.
 
@@ -99,54 +106,18 @@ components:
 - Group endpoints by tag (Authentication, Projects, Tasks, etc.).
 - Document error responses with their actual status codes and shapes.
 
-## Phase 4 — Write API Reference Document
+## Phase 4 — Requirement Coverage
 
-Write `docs/07-api-reference.md` with:
+`openapi.yaml` is the only API reference — there is no separate
+markdown copy (conventions §1). Put the prose a reader needs (base URL,
+auth scheme, error model) in `info.description` and
+`components.securitySchemes`.
 
-```markdown
-# API Reference
-
-## Overview
-- Base URL: ...
-- Authentication: Bearer JWT token
-- Content-Type: application/json
-
-## Authentication
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| POST | /auth/register | Register new user | No |
-| POST | /auth/login | Login | No |
-| GET | /auth/me | Get current user | Yes |
-
-## [Group Name]
-### [Endpoint Name]
-**`METHOD /path`**
-
-Description.
-
-**Request:**
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| ... | ... | ... | ... |
-
-**Response (200):**
-```json
-{
-  "example": "response"
-}
-```
-
-**Errors:**
-| Status | Description |
-|--------|-------------|
-| 400 | ... |
-| 401 | ... |
-```
-
-Include:
-- Requirements coverage table: which requirement IDs (`FR-<AREA>-NN`, from `openspec/specs/**` + active change deltas) each endpoint fulfills.
-- Endpoints with no corresponding requirement (orphans). For each, draft a change proposal note: add an `OQ-NN` entry under `## Open Questions` in the active change's `design.md` ("endpoint X has no requirement — add as ADDED/MODIFIED delta, or remove?"). If no change is active, list them in this section as candidate ADDED/MODIFIED deltas for `iterate`. Never edit `openspec/specs/` (conventions §4, §7).
-- Requirements with no corresponding endpoint (potential gaps).
+- On each operation, list the requirements it fulfils:
+  `x-requirements: [FR-NOM-01, FR-NOM-05]` (IDs from `openspec/specs/**` + active change deltas).
+- Endpoints with no requirement (orphans): add an `OQ-NN` entry under `## Open Questions` in the active change's `design.md` ("endpoint X has no requirement — add as ADDED/MODIFIED delta, or remove?"). If no change is active, return them in your summary as candidate deltas for `iterate`. Never edit `openspec/specs/` (conventions §4, §8).
+- Requirements with no endpoint (potential gaps): same treatment.
+- Check the endpoint groups in `openspec/context/architecture.md` §4 still match; if not, report the drift (the designer owns that file).
 
 ## Phase 5 — Swagger UI (Optional)
 
@@ -156,7 +127,7 @@ If the project uses Next.js, create an API docs page:
 2. Create a route that serves the OpenAPI spec as JSON: `/api/docs/spec`
 3. Create a page that renders Swagger UI: `/api-docs` or `/docs/api`
 
-If the framework doesn't support easy UI embedding, skip this step and note it in the docs.
+If the framework doesn't support easy UI embedding, skip this step and note it in `info.description`.
 
 ## Phase 6 — Validate
 
@@ -174,7 +145,7 @@ If the framework doesn't support easy UI embedding, skip this step and note it i
 ## Git Commit & Push
 
 ```
-git add openapi.yaml docs/07-api-reference.md
-git commit -m "feat: add OpenAPI specification and API reference documentation"
+git add openapi.yaml openspec/changes/
+git commit -m "feat: add OpenAPI specification"
 git push origin HEAD 2>/dev/null || git push --set-upstream origin HEAD 2>/dev/null || true
 ```

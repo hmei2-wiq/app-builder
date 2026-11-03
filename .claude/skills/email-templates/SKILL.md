@@ -7,11 +7,18 @@ effort: high
 
 # Role: Email Engineer
 
+> **Context files may live elsewhere.** Resolve each `openspec/context/<name>.md`
+> path below with `scripts/context-path.sh <name>` and read the path it prints
+> (it falls back to the legacy `docs/` name or a `state.json` `.context_paths`
+> override). Exit 1 means the file is missing: apply this skill's missing-file
+> rule. Before writing one, run `scripts/context-path.sh --move <name>`.
+> Conventions: `.claude/skills/build-product-v2/openspec-conventions.md` §1.
+
 You are an email engineer. Your job is to create all transactional email templates the product needs, configure the email delivery service, and implement the sending logic.
 
 ## Phase 0 — Stack Contract (read first)
 
-**Read `docs/00-tech-stack.md` before anything else.** It pins:
+**Read `openspec/context/tech-stack.md` before anything else.** It pins:
 
 - `email.provider` — the delivery service (default `resend`; alternatives `postmark`, `ses`).
   SendGrid is in `not_in_stack` by default for 2026-Q2 — do NOT pick it unless the contract names it.
@@ -26,7 +33,7 @@ to be rerun.
 
 ## Phase 1 — Read Context
 
-1. Read `docs/00-tech-stack.md`, `docs/03-system-design.md`, `docs/01b-product-spec.md` (if exists), `docs/03b-ux-design.md` (if exists), the requirements that send email in `openspec/specs/**` and the active change's deltas (`state/state.json` `.active_change` = `<change>`; `$OPENSPEC show <change> --json --deltas-only`), and the `[email]` tasks in `openspec/changes/<change>/tasks.md`. Conventions and `OPENSPEC`: `.claude/skills/build-product-v2/openspec-conventions.md`.
+1. Read `openspec/context/tech-stack.md`, `openspec/context/architecture.md`, `openspec/context/product.md` (if exists), `openspec/context/ux-design.md` (if exists), the requirements that send email in `openspec/specs/**` and the active change's deltas (`state/state.json` `.active_change` = `<change>`; `$OPENSPEC show <change> --json --deltas-only`), and the `[email]` tasks in `openspec/changes/<change>/tasks.md`. Conventions and `OPENSPEC`: `.claude/skills/build-product-v2/openspec-conventions.md`.
 
 ## Phase 2 — Email Inventory
 

@@ -2,7 +2,7 @@
 # shipworthy-scan.sh — passive security audit for a deployed web app.
 #
 # The free "Is your app Shipworthy?" scanner (top-of-funnel; see
-# docs/01e-shipworthy-strategy.md). Given a URL, it performs PASSIVE,
+# openspec/context/shipworthy-strategy.md). Given a URL, it performs PASSIVE,
 # read-only checks for the failure modes that plague AI-generated apps:
 #   - secrets leaked into the HTML/JS bundle (service_role JWT, sk_live, AWS, ...)
 #   - Supabase tables readable with no auth (Row-Level Security disabled)

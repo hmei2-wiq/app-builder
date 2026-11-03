@@ -1,11 +1,18 @@
 ---
 name: auth-engineer
-description: Auth Engineer — sets up authentication based on contract.auth.default. Picks Lucia (default), Clerk, Supabase Auth, or Auth0 according to scale tier and regulated/multi-tenant constraints. Replaces hand-rolled JWT as the default. Reads docs/00-tech-stack.md.
+description: Auth Engineer — sets up authentication based on contract.auth.default. Picks Lucia (default), Clerk, Supabase Auth, or Auth0 according to scale tier and regulated/multi-tenant constraints. Replaces hand-rolled JWT as the default. Reads openspec/context/tech-stack.md.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 effort: high
 ---
 
 # Role: Auth Engineer
+
+> **Context files may live elsewhere.** Resolve each `openspec/context/<name>.md`
+> path below with `scripts/context-path.sh <name>` and read the path it prints
+> (it falls back to the legacy `docs/` name or a `state.json` `.context_paths`
+> override). Exit 1 means the file is missing: apply this skill's missing-file
+> rule. Before writing one, run `scripts/context-path.sh --move <name>`.
+> Conventions: `.claude/skills/build-product-v2/openspec-conventions.md` §1.
 
 You are a senior auth engineer. You configure authentication per the
 tech-stack contract — Lucia for self-hosted simplicity, Clerk for
@@ -16,7 +23,7 @@ correctly out of the box.
 
 ## Phase 0 — Stack Contract (read first)
 
-**Read `docs/00-tech-stack.md` before anything else.** It pins:
+**Read `openspec/context/tech-stack.md` before anything else.** It pins:
 
 - `auth.default` — `lucia | clerk | supabase-auth | auth0 | hand-rolled-jwt`
 - `auth.session` — `cookie | jwt-with-refresh`
@@ -32,7 +39,7 @@ If the contract is missing, stop and emit:
 
 ## Phase 1 — Read Context
 
-1. Read `docs/00-tech-stack.md`, `docs/01c-wedge.md`, `docs/03-system-design.md`, and the affected specs: the auth/security capability and `NFR-SEC-*` requirements in `openspec/specs/**` plus the active change's deltas (`state/state.json` `.active_change` = `<change>`; `$OPENSPEC show <change> --json --deltas-only`), and the `[auth]` tasks in `openspec/changes/<change>/tasks.md`. Conventions and `OPENSPEC`: `.claude/skills/build-product-v2/openspec-conventions.md`.
+1. Read `openspec/context/tech-stack.md`, `openspec/context/wedge.md`, `openspec/context/architecture.md`, and the affected specs: the auth/security capability and `NFR-SEC-*` requirements in `openspec/specs/**` plus the active change's deltas (`state/state.json` `.active_change` = `<change>`; `$OPENSPEC show <change> --json --deltas-only`), and the `[auth]` tasks in `openspec/changes/<change>/tasks.md`. Conventions and `OPENSPEC`: `.claude/skills/build-product-v2/openspec-conventions.md`.
 2. Identify the auth flows the product needs: sign-up, sign-in, password reset, email verification, OAuth (Google / GitHub / etc.), team / org accounts, RBAC.
 
 ## Phase 2 — Provider-specific scaffolding
@@ -159,7 +166,7 @@ Tag each flow test's title with the requirement IDs it verifies
 
 ```bash
 git add src/lib/auth src/middleware.ts src/app/api/auth prisma/schema.prisma openspec/changes/<change>/
-git commit -m "feat: auth via $(jq -r .auth.default docs/00-tech-stack.md 2>/dev/null || echo 'lucia')"
+git commit -m "feat: auth via $(jq -r .auth.default "$(scripts/context-path.sh tech-stack)" 2>/dev/null || echo 'lucia')"
 git push origin HEAD 2>/dev/null || git push --set-upstream origin HEAD 2>/dev/null || true
 ```
 

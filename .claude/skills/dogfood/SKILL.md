@@ -8,6 +8,13 @@ effort: high
 
 # Role: Dogfood QA
 
+> **Context files may live elsewhere.** Resolve each `openspec/context/<name>.md`
+> path below with `scripts/context-path.sh <name>` and read the path it prints
+> (it falls back to the legacy `docs/` name or a `state.json` `.context_paths`
+> override). Exit 1 means the file is missing: apply this skill's missing-file
+> rule. Before writing one, run `scripts/context-path.sh --move <name>`.
+> Conventions: `.claude/skills/build-product-v2/openspec-conventions.md` §1.
+
 You are the last person between the build and a public URL. Your job is
 to actually use the product the way a real ICP user would — not to
 read the code, not to read the test report, but to **drive the wedge
@@ -26,10 +33,10 @@ agent-built SaaS skeletons feel hollow.
 
 Required:
 - A buildable, runnable app (project's `npm run dev` works)
-- `docs/01c-wedge.md` — wedge workflow (this is the test plan)
-- `docs/03b-ux-design.md` — screen → Figma node index (the wireframes
-  themselves live in Figma; 03b tells you which frame to compare against)
-- `docs/16-pricing.md` — trial mechanic (Phase 5 CTA check)
+- `openspec/context/wedge.md` — wedge workflow (this is the test plan)
+- `openspec/context/ux-design.md` — screen → Figma node index (the wireframes
+  themselves live in Figma; ux-design.md tells you which frame to compare against)
+- `openspec/context/pricing.md` — trial mechanic (Phase 5 CTA check)
 - `openspec/specs/**` + the active change's deltas (`state/state.json`
   `.active_change` → `openspec/changes/<change>/specs/**`) — the
   requirement scenarios each wedge step must satisfy. Conventions:
@@ -59,6 +66,15 @@ done
 
 Record dev server PID in `state/dogfood.pid` so the skill can clean up.
 
+Reports go to the active change (conventions §1); each dogfood run of
+the change gets its own numbered report:
+
+```bash
+CHANGE=$(jq -r '.active_change // empty' state/state.json 2>/dev/null)
+REPORTS="${CHANGE:+openspec/changes/$CHANGE/reports}"; REPORTS="${REPORTS:-reports}"; mkdir -p "$REPORTS"
+RUN=$(( $(ls "$REPORTS"/dogfood-*.md 2>/dev/null | wc -l) + 1 ))
+```
+
 If the dev server fails to come up, stop and route to
 `backend-developer` or `frontend-developer` based on the error class.
 
@@ -87,9 +103,8 @@ else
       echo "BLOCKED: wedge-critical table $table has $COUNT rows (manifest min_rows=$MIN)"
       OWNER=$(scripts/route-failure.sh --gate dogfood-empty-seed --area prisma/)
       # Write a stub iteration report so the orchestrator sees the bounce.
-      mkdir -p docs/dogfood
-      cat > docs/dogfood/iteration-N.md <<EOF
-# Dogfood Report — Iteration N (BLOCKED)
+      cat > "$REPORTS/dogfood-$RUN.md" <<EOF
+# Dogfood Report — ${CHANGE:-no change} run $RUN (BLOCKED)
 
 ## Verdict: BLOCKED
 ## Overall health: n/a (seed missing)
@@ -148,17 +163,17 @@ Save to `dogfood/00-cold-boot.png`. Score 0–10:
 Before walking, map each wedge step to the requirement IDs and
 scenarios it exercises (look them up in the specs, e.g.
 `$OPENSPEC show <capability> --type spec --json`, or via the screen's
-requirement IDs in 03b). A step that maps to no requirement is itself
+requirement IDs in ux-design.md). A step that maps to no requirement is itself
 a finding — record it as an `OQ-NN` in the active change's
-`design.md` (conventions §7).
+`design.md` (conventions §8).
 
-For each step in the wedge workflow from `01c-wedge.md`:
+For each step in the wedge workflow from `openspec/context/wedge.md`:
 
 1. Use `browse` to perform the user action (click, type, submit,
    upload, etc.)
 2. Screenshot before + after
 3. Diff against the Figma frame for this screen (node ID from the
-   screen index in `03b-ux-design.md`)
+   screen index in `openspec/context/ux-design.md`)
 4. Time the step (target: the step's `NFR-PERF-*` threshold if one
    applies, else < 5s for self-serve flows)
 5. Capture console + network errors
@@ -215,7 +230,7 @@ proxy it:
   on the page? If no, the design is burying the wedge.
 - Do the three feature blocks below the fold each tie to a step of
   the wedge workflow? If no, the page is feature-soup.
-- Does the primary CTA match the trial mechanic from `16-pricing.md`?
+- Does the primary CTA match the trial mechanic from `openspec/context/pricing.md`?
   If no, conversion will leak.
 
 Each is binary; score them separately and average.
@@ -249,10 +264,10 @@ seed manifest passes the `seed-integrity` quality gate.
 
 ## Phase 7 — Bug Report
 
-Write `docs/dogfood/iteration-N.md`:
+Write `$REPORTS/dogfood-$RUN.md` (read the previous run's report, if any, to note what changed):
 
 ```markdown
-# Dogfood Report — Iteration N
+# Dogfood Report — <change> run <RUN>
 
 ## Date: <YYYY-MM-DD>
 ## Verdict: <SHIP | POLISH | LOOP | RETHINK>
@@ -291,7 +306,7 @@ Write `docs/dogfood/iteration-N.md`:
 Each bug must name its **owner skill** (which agent should fix it)
 and the requirement IDs it violates. The orchestrator uses this to
 route. Bugs that show the spec itself is wrong or ambiguous follow
-conventions §7 (MODIFIED delta or `OQ-NN`), never an edit to
+conventions §8 (MODIFIED delta or `OQ-NN`), never an edit to
 `openspec/specs/`.
 
 ---
@@ -310,8 +325,8 @@ Always run cleanup, even on failure paths.
 ## Git Commit & Push
 
 ```bash
-git add dogfood/ docs/dogfood/
-git commit -m "test: dogfood iteration N — verdict <V>, health <X>/10"
+git add dogfood/ openspec/changes/
+git commit -m "test: dogfood <change> run <RUN> — verdict <V>, health <X>/10"
 git push origin HEAD 2>/dev/null || git push --set-upstream origin HEAD 2>/dev/null || true
 ```
 
@@ -322,7 +337,7 @@ Screenshots go in the repo for visual diffing across iterations.
 ## Completion summary
 
 ```
-## Dogfood Complete — iteration N
+## Dogfood Complete — <change> run <RUN>
 
 - Verdict:           <SHIP | POLISH | LOOP | RETHINK>
 - Overall health:    <X.Y>/10

@@ -8,6 +8,13 @@ effort: max
 
 # Autonomous Product Builder v2
 
+> **Context files may live elsewhere.** Resolve each `openspec/context/<name>.md`
+> path below with `scripts/context-path.sh <name>` and read the path it prints
+> (it falls back to the legacy `docs/` name or a `state.json` `.context_paths`
+> override). Exit 1 means the file is missing: apply this skill's missing-file
+> rule. Before writing one, run `scripts/context-path.sh --move <name>`.
+> Conventions: `.claude/skills/build-product-v2/openspec-conventions.md` §1.
+
 You are the orchestrator of a state-machine pipeline that turns a product
 idea into a market-competitive product. You do **not** run all phases in
 your own context. You spawn `general-purpose` subagents per phase, each
@@ -41,7 +48,7 @@ into `openspec/specs/` at ship. Every later iteration is another change.
    The orchestrator updates it via `scripts/state-set.sh`. Subagents
    return structured summaries that the orchestrator merges into state.
 3. **Wedge is law.** After Phase 2, every subsequent subagent receives
-   `docs/01c-wedge.md` in its context manifest and must embed the
+   `openspec/context/wedge.md` in its context manifest and must embed the
    one-sentence wedge in its output. Out-of-wedge work → `Wedge: v2`.
 4. **Critic gate at every boundary.** Spawn a separate `general-purpose`
    subagent that invokes `/codex` (when available) or runs a critic
@@ -53,8 +60,9 @@ into `openspec/specs/` at ship. Every later iteration is another change.
    phase via `scripts/route-failure.sh`. Critic verdicts can demote
    `LOCKED` artifacts to `DRAFT` and replan.
 7. **Hard gates beat soft gates.** Use `scripts/quality-gates.sh` —
-   typecheck → lint → seed-integrity → unit → mutation ≥ 70% →
-   integration → contract → e2e → a11y → Lighthouse → visual. Each
+   spec-validate → typecheck → lint → seed-integrity → unit →
+   mutation ≥ 70% → integration → contract → e2e → traceability →
+   a11y → Lighthouse → visual. Each
    gate is a separate hard pass.
 8. **No ops bloat.** Default scale tier is `preview`. Most products
    ship without Terraform, BullMQ, or a PRR.
@@ -83,6 +91,8 @@ Task(
        - <doc 1>
        - <doc 2>
        (do not read other docs; this is the entire context budget)
+       (resolve each `openspec/context/<name>` entry with
+       `scripts/context-path.sh <name>` and read the path it prints)
 
     2. Invoke the skill via the Skill tool:
        Skill(skill="<skill_name>", args="<args or empty>")
@@ -128,7 +138,7 @@ Task(
   description   = "Critic gate — <phase>",
   prompt        = """
     You are an adversarial critic. You did NOT write the artifact at
-    <path>. Read it now (and only it; plus docs/01c-wedge.md if Phase 2+).
+    <path>. Read it now (and only it; plus openspec/context/wedge.md if Phase 2+).
 
     If the `codex` skill is available, invoke it via:
        Skill(skill="codex", args="review <path>")
@@ -313,48 +323,54 @@ stateDiagram-v2
 ## Per-phase context manifests
 
 The orchestrator passes each subagent only these docs (the prompt
-template's "context manifest" slot). Every manifest after
+template's "context manifest" slot). A bare name such as `wedge` is
+`openspec/context/<name>.md`; resolve it with
+`scripts/context-path.sh <name>`, which also finds it outside that
+folder (conventions §1). Every manifest after
 `tech-stack-selector` also includes
 `.claude/skills/build-product-v2/openspec-conventions.md`.
 
 Shorthand: **specs** = `openspec/specs/**` (current truth);
 **Δ** = the active change `openspec/changes/<active_change>/`
 (`proposal.md`, `specs/**` deltas, `design.md`, `tasks.md`);
-**tasks** = Δ `tasks.md`.
+**tasks** = Δ `tasks.md`; **Δ reports** = Δ `reports/` (per-change
+evidence, archived with the change); **trace** =
+`reports/traceability.md` (generated). Where each artifact lives and
+who owns it: `openspec-conventions.md` §1 — one fact, one home.
 
 | Phase | Reads | Writes |
 |---|---|---|
-| `ceo` | product idea | `01-market-analysis.md` |
-| `differentiation` | `01` | `01c-wedge.md` (now incl. Stack constraints) |
-| `spec-ingest` (`--from-spec`) | source doc | Δ (`import-<slug>`: proposal, deltas, design OQs), `01b`, `01c` (DRAFT) |
-| `tech-stack-selector` | `01c`, `state.json` | `00-tech-stack.md` |
-| `product-spec` | `00`, `01`, `01c`, specs | `01b-product-spec.md`, Δ `proposal.md` |
-| `analyst` | `00`, `01`, `01b`, `01c`, specs, Δ `proposal.md` | Δ `specs/**`, Δ `design.md` (Open Questions) |
-| `designer` | `00`, `01b`, `01c`, specs, Δ | `03-system-design.md`, Δ `design.md`, tasks |
-| `ux-designer` | `00`, `01b`, `01c`, `03`, specs, Δ | Figma, `03b-ux-design.md` |
-| `auth-engineer` | `00`, `01c`, `03`, specs, Δ | auth code, Δ `design.md`, ticks `[auth]` tasks |
-| `email-templates` (conditional) | `00`, `01b`, `03`, `03b`, specs, Δ | email service, templates, ticks `[email]` tasks |
-| `ai-features` (conditional) | `00`, `01c`, `03`, `16`, specs, Δ | `src/lib/ai/`, `src/prompts/`, `evals/`, ticks `[ai]` tasks |
-| `backend-developer` | `00`, `01c`, `03`, specs, Δ | code + tagged tests, ticks `[backend]` tasks |
-| `frontend-developer` | `00`, `01b`, `01c`, `03`, `03b`, `07`, specs, Δ | code + tagged tests, ticks `[frontend]` tasks |
-| `db-migrator` | `00`, `03`, specs, Δ | migrations, seed, ticks `[db]` tasks |
-| `api-docs` | code, `03`, specs, Δ | `07-api-reference.md`, `openapi.yaml` |
-| `e2e-tester` | code, `00`, `01b`, `03`, `03b`, specs, Δ | `e2e/` (one test per scenario), `playwright.config.ts` |
-| `adversarial-tester` | code, `03`, specs, Δ | `tests/adversarial/`, `08b` |
-| `security-auditor` | code, `00`, `03`, specs | `09-security-audit.md` |
-| `dogfood` | running app, `01c`, `03b`, `16`, specs | `docs/dogfood/iteration-N.md`, `dogfood/*.png` |
-| `perf-tester` (launch+) | code, `03`, specs | `10-performance-report.md`, k6 tests |
-| `reviewer` (launch+) | full repo, `03`, specs, `11` | `05-code-review.md` |
-| `pricing` (saas) | `01`, `01b`, `01c` | `16-pricing.md` |
-| `positioning` (saas) | `01c`, `01b`, `16` | `17-positioning.md` |
-| `landing-page` (saas) | `00`, `01c`, `03b`, `16`, `17` | landing page code |
-| `legal-compliance` | `00`, `01b`, `01c`, `03`, specs | legal pages, consent banner |
-| `cicd` | `00`, `03`, tasks | `.buildkite/` (or `.github/workflows/`), `Dockerfile` |
-| `deployer` | `00`, `03`, `state.json` | `infra/` or `vercel.json`/`fly.toml` |
-| `rollback` (launch+) | `00`, `03`, deploy state | rollback runbook, deploy verification hooks |
-| `observability` (launch+) | `00`, `03`, specs | logging, health checks, dashboards |
-| `signal-iterate` | analytics, `01c`, `01b`, specs | `docs/iteration-N/...`, its own change Δ |
-| `iterate` | `01`, `03`, specs, `11` | `06-gap-analysis.md`, its own change Δ |
+| `ceo` | product idea | `openspec/context/product-analysis.md` |
+| `differentiation` | `product-analysis` | `openspec/context/wedge.md` (now incl. Stack constraints) |
+| `spec-ingest` (`--from-spec`) | source doc | Δ (`import-<slug>`: proposal, deltas, design OQs, `reports/ingest.md`), `product`, `wedge` (DRAFT) |
+| `tech-stack-selector` | `wedge`, `state.json` | `openspec/context/tech-stack.md` |
+| `product-spec` | `tech-stack`, `product-analysis`, `wedge`, specs | `openspec/context/product.md` (personas, KPIs), Δ `proposal.md` (stories, non-goals) |
+| `analyst` | `tech-stack`, `product-analysis`, `product`, `wedge`, specs, Δ `proposal.md` | Δ `specs/**`, Δ `design.md` (Open Questions) |
+| `designer` | `tech-stack`, `product`, `wedge`, specs, Δ | `openspec/context/architecture.md` (current state), Δ `design.md` (decisions, gaps, OQs), tasks |
+| `ux-designer` | `tech-stack`, `product`, `wedge`, `architecture`, specs, Δ | Figma, `openspec/context/ux-design.md` |
+| `auth-engineer` | `tech-stack`, `wedge`, `architecture`, specs, Δ | auth code, Δ `design.md`, ticks `[auth]` tasks |
+| `email-templates` (conditional) | `tech-stack`, `product`, `architecture`, `ux-design`, specs, Δ | email service, templates, ticks `[email]` tasks |
+| `ai-features` (conditional) | `tech-stack`, `wedge`, `architecture`, `pricing`, specs, Δ | `src/lib/ai/`, `src/prompts/`, `evals/`, ticks `[ai]` tasks |
+| `backend-developer` | `tech-stack`, `wedge`, `architecture`, specs, Δ | code + tagged tests, ticks `[backend]` tasks |
+| `frontend-developer` | `tech-stack`, `product`, `wedge`, `architecture`, `ux-design`, `openapi.yaml`, specs, Δ | code + tagged tests, ticks `[frontend]` tasks |
+| `db-migrator` | `tech-stack`, `architecture`, specs, Δ | migrations, seed, ticks `[db]` tasks |
+| `api-docs` | code, `architecture`, specs, Δ | `openapi.yaml` (`x-requirements`), orphan OQs in Δ `design.md` |
+| `e2e-tester` | code, `tech-stack`, `product`, `architecture`, `ux-design`, specs, Δ | `e2e/` (one test per scenario), `playwright.config.ts`, trace, Δ `reports/e2e.md` |
+| `adversarial-tester` | code, `architecture`, specs, Δ | `tests/adversarial/`, Δ `reports/adversarial.md` |
+| `security-auditor` | code, `tech-stack`, `architecture`, specs | Δ `reports/security-audit.md` |
+| `dogfood` | running app, `wedge`, `ux-design`, `pricing`, specs | Δ `reports/dogfood-<run>.md`, `dogfood/*.png` |
+| `perf-tester` (launch+) | code, `architecture`, specs | Δ `reports/performance.md`, k6 tests |
+| `reviewer` (launch+) | full repo, `architecture`, specs, trace | Δ `reports/code-review.md` |
+| `pricing` (saas) | `product-analysis`, `product`, `wedge` | `openspec/context/pricing.md` |
+| `positioning` (saas) | `wedge`, `product`, `pricing` | `openspec/context/positioning.md` |
+| `landing-page` (saas) | `tech-stack`, `wedge`, `ux-design`, `pricing`, `positioning` | landing page code |
+| `legal-compliance` | `tech-stack`, `product`, `wedge`, `architecture`, specs | legal pages, consent banner |
+| `cicd` | `tech-stack`, `architecture`, tasks | `.buildkite/` (or `.github/workflows/`), `Dockerfile` |
+| `deployer` | `tech-stack`, `architecture`, `state.json` | `infra/` or `vercel.json`/`fly.toml` |
+| `rollback` (launch+) | `tech-stack`, `architecture`, deploy state | `openspec/context/runbook.md`, deploy verification hooks |
+| `observability` (launch+) | `tech-stack`, `architecture`, specs | logging, health checks, dashboards |
+| `signal-iterate` | analytics, `wedge`, `product`, specs, last archived signal change | its own change Δ (proposal = the one change; `reports/signals-*.md`) |
+| `iterate` | `product-analysis`, `architecture`, specs, trace, last archived `iter-*` change | `product-analysis` (appended update), its own change Δ (`reports/gap-analysis.md`, `reports/verification.md`) |
 
 ---
 
@@ -362,7 +378,7 @@ Shorthand: **specs** = `openspec/specs/**` (current truth);
 
 ### Phase 0 — Bootstrap (orchestrator runs directly)
 ```bash
-mkdir -p state docs
+mkdir -p state openspec/context
 scripts/state-init.sh "$ARGUMENTS"
 git init 2>/dev/null || true
 
@@ -373,7 +389,7 @@ OPENSPEC="npx --yes @fission-ai/openspec@1.15.0"
 ```
 
 Then write `openspec/config.yaml` from
-`openspec-conventions.md` §8 (overwrite the generated one; keep
+`openspec-conventions.md` §9 (overwrite the generated one; keep
 `schema: spec-driven`), and set the first change:
 
 ```bash
@@ -393,8 +409,8 @@ there for humans working on the same repo.
 ### Phase 0.5 — `spec-ingest` (only with `--from-spec`)
 Subagent, skill `spec-ingest`, manifest `[source doc]`, model
 `sonnet`, args `$SOURCE`. It writes the `import-<slug>` change
-(proposal, deltas, design.md Open Questions, `ingest-report.md`),
-`docs/01b-product-spec.md`, and a DRAFT `docs/01c-wedge.md`; it sets
+(proposal, deltas, design.md Open Questions, `reports/ingest.md`),
+`openspec/context/product.md`, and a DRAFT `openspec/context/wedge.md`; it sets
 `.active_change` and `.product_type`.
 
 Then `ingest_critic` (model `opus`), checklist below. On pass, go to
@@ -417,7 +433,7 @@ Spawn a subagent using the template above with:
 On `PHASE_RESULT.status = done` → run critic gate (next phase).
 
 ### Phase 1c — `ceo_critic`
-Critic spawn against `docs/01-market-analysis.md`, model `sonnet`.
+Critic spawn against `openspec/context/product-analysis.md`, model `sonnet`.
 Pass criteria:
 - TAM/SAM/SOM cited with sources
 - ≥ 5 competitors with pricing or "no public price" called out
@@ -428,8 +444,8 @@ Pass criteria:
 Fail → loop to `ceo` with `must_fix` as input.
 
 ### Phase 2 — `differentiation`
-Subagent template, skill `differentiation`, manifest `[01]`, model `opus`.
-On done, the skill writes `01c-wedge.md`. Parse and run:
+Subagent template, skill `differentiation`, manifest `[product-analysis]`, model `opus`.
+On done, the skill writes `openspec/context/wedge.md`. Parse and run:
 ```bash
 scripts/state-set.sh '.wedge_sentence' "\"$WEDGE\""
 scripts/state-set.sh '.scale_tier'     "\"$TIER\""
@@ -445,7 +461,7 @@ Critic spawn, model `sonnet`. Checks:
 - Wedge sentence < 140 chars
 - Could-copy-in-a-weekend test fails (i.e. non-trivial)
 
-If `verdict = fail` AND `01c-wedge.md` is `Status: DRAFT`, loop to
+If `verdict = fail` AND `openspec/context/wedge.md` is `Status: DRAFT`, loop to
 `differentiation`. If `verdict = fail` AND `LOCKED`, demote to DRAFT
 in state and loop.
 
@@ -461,35 +477,44 @@ single highest-leverage human decision. Confirming it locks the wedge
 AND the stack constraints — both are inputs to the next phase.
 
 ### Phase 2.7 — `tech-stack-selector` (NEW)
-Subagent, skill `tech-stack-selector`, manifest `[01c]`, model `sonnet`.
-On done, the skill writes `docs/00-tech-stack.md`. Parse the resolved
-contract and persist key fields:
+Subagent, skill `tech-stack-selector`, manifest `[wedge]`, model `sonnet`.
+On done, the skill writes `openspec/context/tech-stack.md`. Parse the resolved
+contract (the `yaml` block under "Stack matrix" — the file itself is
+markdown, so `yq` cannot read it directly) and persist key fields:
 ```bash
-scripts/state-set.sh '.tech_stack.ci_provider'  "\"$(yq '.ci.provider' docs/00-tech-stack.md)\""
-scripts/state-set.sh '.tech_stack.cloud'        "\"$(yq '.cloud.provider' docs/00-tech-stack.md)\""
-scripts/state-set.sh '.tech_stack.auth'         "\"$(yq '.auth.default' docs/00-tech-stack.md)\""
-scripts/state-set.sh '.tech_stack.ai_heavy'     "$([[ -n \"$(yq '.ai.cost_tracking // empty' docs/00-tech-stack.md)\" ]] && echo true || echo false)"
+mkdir -p state/artifacts
+sed -n '/^## 1\. Stack matrix/,/^## 2\./p' "$(scripts/context-path.sh tech-stack)" \
+  | sed -n '/^```yaml/,/^```/{/^```/d;p}' > state/artifacts/tech-stack.yaml
+STACK=state/artifacts/tech-stack.yaml
+scripts/state-set.sh '.tech_stack.ci_provider'  "\"$(yq '.ci.provider' "$STACK")\""
+scripts/state-set.sh '.tech_stack.cloud'        "\"$(yq '.cloud.provider' "$STACK")\""
+scripts/state-set.sh '.tech_stack.auth'         "\"$(yq '.auth.default' "$STACK")\""
+scripts/state-set.sh '.tech_stack.ai_heavy'     "$([[ -n \"$(yq '.ai.cost_tracking // ""' "$STACK")\" ]] && echo true || echo false)"
 ```
+`state/artifacts/tech-stack.yaml` and these `state.json` fields are a
+machine cache of the contract; re-extract them whenever the contract
+is rerun, never edit them.
 
 ### Phase 2.7c — `stack_critic`
-Critic spawn against `docs/00-tech-stack.md`, model `opus` (different
+Critic spawn against `openspec/context/tech-stack.md`, model `opus` (different
 from selector's `sonnet`). Pass criteria:
 - Versions pinned to majors (no "latest"); `tooling.*` pinned exactly
 - `not_in_stack` non-empty (≥ 3 retired defaults)
 - Every override has a one-line rationale
-- All constraint flags from `01c-wedge.md` are addressed
+- All constraint flags from `openspec/context/wedge.md` are addressed
 - Vendors named only when org has corresponding env vars (e.g. Buildkite needs `$BK_API_TOKEN`)
 - `ci.provider: buildkite` chosen unless explicit reason against (cost-effective default)
 
 Fail → loop to `tech-stack-selector` with `must_fix` as input.
 
 ### Phase 3 — `product-spec`
-Subagent, skill `product-spec`, manifest `[00, 01, 01c, specs]`, model `sonnet`.
+Subagent, skill `product-spec`, manifest `[tech-stack, product-analysis, wedge, specs]`, model `sonnet`.
 Hard cap: one critical flow + 3 supporting; rest `Wedge: v2`. Writes
-`01b` and opens the `mvp` change's `proposal.md`.
+`product` (personas, KPIs) and opens the `mvp` change's `proposal.md`
+(story map, non-goals, capabilities).
 
 ### Phase 4 — `analyst`
-Subagent, skill `analyst`, manifest `[00, 01, 01b, 01c, specs, Δ proposal]`,
+Subagent, skill `analyst`, manifest `[tech-stack, product-analysis, product, wedge, specs, Δ proposal]`,
 model `sonnet`. Writes one delta spec per proposal capability; every
 requirement has an ID, `Priority`, `Wedge` tag and ≥ 1 scenario.
 
@@ -506,13 +531,13 @@ Validation failure → loop to `analyst` with the validator output as
 `must_fix` (no critic spawn needed).
 
 ### Phase 5 — `designer`
-Subagent, skill `designer`, manifest `[00, 01b, 01c, specs, Δ]`, model `opus`.
-Writes `docs/03-system-design.md`, Δ `design.md` and Δ `tasks.md`.
+Subagent, skill `designer`, manifest `[tech-stack, product, wedge, specs, Δ]`, model `opus`.
+Writes `openspec/context/architecture.md`, Δ `design.md` and Δ `tasks.md`.
 Critic enforces tier-appropriate architecture (no microservices on
 preview).
 
 ### Phase 6 — `ux-designer`
-Subagent, skill `ux-designer`, manifest `[00, 01b, 01c, 03, specs, Δ]`, model `sonnet`.
+Subagent, skill `ux-designer`, manifest `[tech-stack, product, wedge, architecture, specs, Δ]`, model `sonnet`.
 Pre-step: instruct the subagent to use the `browse` skill to
 screenshot the top 3 competitors before designing. Critic uses the
 `plan-design-review` rubric (≥ 7 across all dimensions).
@@ -525,7 +550,7 @@ deltas and re-validated before Phase 6.7. No code is written while a
 Must requirement carries `[NEEDS CLARIFICATION]`.
 
 ### Phase 6.7 — `auth-engineer` (NEW, sequential before fan-out)
-Subagent, skill `auth-engineer`, manifest `[00, 01c, 03, specs, Δ]`,
+Subagent, skill `auth-engineer`, manifest `[tech-stack, wedge, architecture, specs, Δ]`,
 model `sonnet`. Scaffolds auth per `contract.auth.default` so
 backend-developer can wire routes against the established session/user
 table. Skipped if `contract.auth.default: hand-rolled-jwt` (legacy
@@ -533,7 +558,7 @@ path; backend-developer owns it).
 
 ### Phase 6.8 — `ai-features` (NEW, conditional, sequential before fan-out)
 Run **only if** `state.tech_stack.ai_heavy == true` (set during Phase
-2.7). Subagent, skill `ai-features`, manifest `[00, 01c, 03, 16, specs, Δ]`,
+2.7). Subagent, skill `ai-features`, manifest `[tech-stack, wedge, architecture, pricing, specs, Δ]`,
 model `opus` (taste-heavy). Establishes RAG schema, prompts, eval
 harness, and cost-tracking ledger so backend-developer wires call sites
 against existing infrastructure. If `ai_heavy: false`, skip silently.
@@ -543,12 +568,13 @@ Run only if the product spec or the requirements mention transactional
 emails (verification, password reset, notifications, digests). Detect with:
 
 ```bash
+CHANGE_DIR="openspec/changes/$(jq -r .active_change state/state.json)"
 grep -riE 'email|verification|password reset|notification|digest' \
-  docs/01b-product-spec.md "openspec/changes/$(jq -r .active_change state/state.json)/specs" \
+  "$CHANGE_DIR/proposal.md" "$CHANGE_DIR/specs" openspec/specs \
   && state.email_needed=true || state.email_needed=false
 ```
 
-Subagent, skill `email-templates`, manifest `[00, 01b, 03, 03b, specs, Δ]`,
+Subagent, skill `email-templates`, manifest `[tech-stack, product, architecture, ux-design, specs, Δ]`,
 model `haiku`. Configures the provider per `contract.email.provider`
 (default Resend), generates templates per `contract.email.templates`
 (default React Email), so backend-developer can call a working
@@ -562,7 +588,7 @@ Emit three `Task` calls in **one message**:
 - `db-migrator` (haiku)
 
 Each writes its `phase_status` field. Wait for all three to return.
-All three read `docs/00-tech-stack.md` as their first action and refuse
+All three read `openspec/context/tech-stack.md` as their first action and refuse
 to introduce vendors not in the contract.
 
 Each subagent's prompt names the task IDs it owns, by owner tag in
@@ -594,15 +620,16 @@ catches the "phantom artifact" failure mode where a subagent narrates
 "seed shipped" but never wrote the file.
 
 ### Phase 7.5 — `api-docs` (NEW, sequential after impl join)
-Subagent, skill `api-docs`, manifest `[code, 03, specs, Δ]`, model `haiku`.
+Subagent, skill `api-docs`, manifest `[code, architecture, specs, Δ]`, model `haiku`.
 Scans the now-implemented routes, extracts validators and types, and
-writes `docs/07-api-reference.md` + `openapi.yaml`. The frontend code
+writes `openapi.yaml` (the single API reference; each operation lists
+its requirements in `x-requirements`). The frontend code
 already exists at this point — `api-docs` is documenting reality, not
 specifying it. Subsequent `frontend-developer` reruns (e.g. from
 `route-failure.sh`) will read this if they need API shapes.
 
 ### Phase 7.7 — `e2e-tester` (NEW, sequential before quality gates)
-Subagent, skill `e2e-tester`, manifest `[code, 00, 01b, 03, 03b, specs, Δ]`, model
+Subagent, skill `e2e-tester`, manifest `[code, tech-stack, product, architecture, ux-design, specs, Δ]`, model
 `sonnet`. Generates a Playwright suite with one test per requirement
 scenario (`@<ID> › <scenario>`) plus auth, error states, and responsive
 layouts, and writes Playwright JSON to `reports/test-results/`. Without
@@ -630,16 +657,16 @@ Re-spawn that owner skill with the failing test output as input.
 After 3 failed attempts on the same gate, surface to user.
 
 ### Phase 9 — `adversarial-tester`
-Subagent, skill `adversarial-tester`, manifest `[code, 03, specs, Δ]`, model `opus`.
+Subagent, skill `adversarial-tester`, manifest `[code, architecture, specs, Δ]`, model `opus`.
 Different model from the implementer to break monoculture. Re-run
 quality gates after.
 
 ### Phase 10 — `security-auditor`
-Subagent, skill `security-auditor`, manifest `[code, 00, 03, specs]`. Tier gate: `preview` → Critical/High
+Subagent, skill `security-auditor`, manifest `[code, tech-stack, architecture, specs]`. Tier gate: `preview` → Critical/High
 only; `launch+` → full OWASP ASVS.
 
 ### Phase 11 — `dogfood` (NEW)
-Subagent, skill `dogfood`, manifest `[01c, 03b, 16, specs]`, model `opus`.
+Subagent, skill `dogfood`, manifest `[wedge, ux-design, pricing, specs]`, model `opus`.
 The skill returns a verdict. Routing:
 - `BLOCKED` → loop to `db-migrator` (seed gate failed at Phase 1.5;
   re-run `seed-integrity` quality gate after the loop)
@@ -650,10 +677,10 @@ The skill returns a verdict. Routing:
 
 ### Phase 11.5 — `perf-tester` (NEW, launch+ only)
 Run only if `state.scale_tier in {launch, scale}`. Subagent, skill
-`perf-tester`, manifest `[code, 03, specs]`, model `sonnet`. Generates k6
+`perf-tester`, manifest `[code, architecture, specs]`, model `sonnet`. Generates k6
 load tests against the wedge workflow, scans Prisma queries for N+1
 patterns, checks for missing DB indexes, captures bundle-size
-baselines, and writes `docs/10-performance-report.md`.
+baselines, and writes Δ `reports/performance.md`.
 
 Hard-fail criteria:
 - p95 latency on the wedge workflow > 2× the `NFR-PERF-*` target
@@ -668,9 +695,9 @@ is sufficient at those scales.
 
 ### Phase 11.7 — `reviewer` (NEW, launch+ only)
 Run only if `state.scale_tier in {launch, scale}`. Subagent, skill
-`reviewer`, manifest `[full repo, 03, specs, 11]`, model `opus` (different
+`reviewer`, manifest `[full repo, architecture, specs, 11]`, model `opus` (different
 from per-artifact critics — full-repo cross-cutting view). Writes
-`docs/05-code-review.md`.
+Δ `reports/code-review.md`.
 
 Per-artifact critics covered each artifact in isolation; this is the
 first phase that reads the entire codebase together. Looks for:
@@ -686,24 +713,21 @@ Findings are auto-fixed iteratively (read the SKILL.md — it loops on
 each issue). For `toy`/`preview` tiers, skip; the per-artifact critics
 already covered everything you need.
 
-### Phase 12 — `pricing` + `positioning` (PARALLEL; `product_type: saas` only)
+### Phase 12 — `pricing` → `positioning` (SEQUENTIAL; `product_type: saas` only)
 Skipped, along with Phases 12.5 and 13, when `state.product_type ==
 "internal"` (an internal tool has no price, headline or landing page).
-Two `Task` calls in one message:
-- `pricing` (sonnet, manifest `[01, 01b, 01c]`)
-- `positioning` (sonnet, manifest `[01c, 01b, 16]` — runs after `pricing`)
-
-Actually `positioning` reads `16-pricing.md`, so they cannot fully
-parallelize. Run `pricing` first, then `positioning`.
+`positioning` reads `openspec/context/pricing.md`, so run them one after the other:
+- `pricing` (sonnet, manifest `[product-analysis, product, wedge]`)
+- `positioning` (sonnet, manifest `[wedge, product, pricing]`)
 
 ### Phase 12.5 — Human checkpoint 3
 Surface tiers, prices, trial mechanic, headline. Confirm or revise.
 
 ### Phase 13 — `landing-page`
-Subagent, skill `landing-page`, manifest `[01c, 03b, 16, 17]`, model `sonnet`.
+Subagent, skill `landing-page`, manifest `[wedge, ux-design, pricing, positioning]`, model `sonnet`.
 
 ### Phase 13.5 — `legal-compliance` (NEW, always for any public deploy)
-Subagent, skill `legal-compliance`, manifest `[00, 01b, 01c, 03, specs]`,
+Subagent, skill `legal-compliance`, manifest `[tech-stack, product, wedge, architecture, specs]`,
 model `haiku`. Generates privacy policy, terms of service, cookie
 consent banner, GDPR data-access/deletion endpoints
 (`DELETE /api/auth/account`, `GET /api/auth/export`), and acceptable
@@ -739,7 +763,7 @@ deltas declared inside `deployer` and `observability` SKILL.md — the
 orchestrator does not need a separate phase for them.
 
 ### Phase 17.5 — `rollback` (NEW, launch+ only)
-Subagent, skill `rollback`, manifest `[00, 03, deploy state]`, model
+Subagent, skill `rollback`, manifest `[tech-stack, architecture, deploy state]`, model
 `haiku`. Wires deploy verification (smoke tests against the deployed
 URL) and automatic rollback on failure. Captures the current revision
 in `./state/rollback-target.env` pre-deploy; if smoke tests fail
@@ -748,7 +772,7 @@ post-deploy, rolls back to the captured revision via
 `aws ecs update-service` (AWS).
 
 Updates `.buildkite/scripts/deploy.sh` to invoke verification + auto-revert.
-Writes a runbook to `docs/19-rollback-runbook.md`.
+Writes the rollback procedure to `openspec/context/runbook.md` (the deploy/incident runbook; `production-readiness` appends to it).
 
 ### Phase 18 — `production-readiness` (scale only)
 
@@ -760,7 +784,7 @@ copy-pasteable line that takes a fresh clone to a seeded, running app,
 sourced from the db-migrator manifest. This guarantees every build —
 toy, preview, launch, scale — ships with a frictionless local-eval
 path. `docs/RUN.md` is reserved for this purpose; it does not collide
-with `docs/12-runbook.md` (deploy/incident runbook, launch+ only).
+with `openspec/context/runbook.md` (deploy/incident runbook, launch+ only).
 
 ```bash
 BOOT=$(jq -r '.boot_command' state/artifacts/db-migrator.json)
@@ -784,7 +808,7 @@ $ONELINER
 
 - Seed contents: see \`state/artifacts/db-migrator.json#.required_paths\`
 - Re-seed only: \`$SEED_CMD\`
-- Deploy / incident runbook: \`docs/12-runbook.md\` (launch+ only)
+- Deploy / incident runbook: \`openspec/context/runbook.md\` (launch+ only)
 EOF
 
 # Persist for the Completion block.
@@ -804,7 +828,7 @@ Then run a canary check (spawn `qa` subagent against the deployed URL).
 
 ### Phase 19.5 — Human checkpoint 4
 GO/NO-GO before public exposure. Show the traceability summary from
-`docs/11-traceability.md` (Must covered N/M) and any Should/Could
+`reports/traceability.md` (Must covered N/M) and any Should/Could
 requirements left untested.
 
 ### Phase 19.7 — Archive the change (orchestrator, on GO)
@@ -813,11 +837,13 @@ The build's change becomes the baseline spec:
 ```bash
 CHANGE=$(jq -r .active_change state/state.json)
 scripts/quality-gates.sh --only spec-validate,traceability   # must be green
+mkdir -p "openspec/changes/$CHANGE/reports"
+cp reports/traceability.md "openspec/changes/$CHANGE/reports/traceability.md"   # proof at ship time
 $OPENSPEC archive "$CHANGE" --yes
 scripts/state-set.sh '.archived_changes' "$(jq -c --arg c "$CHANGE" '.archived_changes + [$c]' state/state.json)"
 scripts/state-set.sh '.active_change' 'null'
 scripts/state-decide.sh archive "archived $CHANGE" "shipped; deltas merged into openspec/specs/"
-scripts/spec-coverage.sh    # refresh docs/11-traceability.md against the merged specs
+scripts/spec-coverage.sh    # refresh reports/traceability.md against the merged specs
 ```
 
 If archive fails (a delta no longer applies), fix the delta, re-run
@@ -853,7 +879,7 @@ Instrument the wedge workflow only. Schedule:
 - [ ] Versions pinned to majors (no "latest"); `tooling.*` pinned exactly
 - [ ] `not_in_stack` non-empty (≥ 3 retired defaults)
 - [ ] Every default-override has a one-line rationale
-- [ ] All `true` constraints from `01c-wedge.md` translated into overrides
+- [ ] All `true` constraints from `openspec/context/wedge.md` translated into overrides
 - [ ] No vendor named without org credentials present (e.g. `$BK_API_TOKEN` for Buildkite)
 - [ ] `ci.provider: buildkite` chosen unless explicit reason against (cost-effective default)
 - [ ] Tier deltas applied (toy ≠ launch in stack shape)
@@ -862,31 +888,31 @@ Instrument the wedge workflow only. Schedule:
 - [ ] Exactly one critical flow
 - [ ] ≤ 3 supporting flows
 - [ ] All else `Wedge: v2`-tagged
-- [ ] Every story has a `US-<AREA>-NN` ID and draft WHEN/THEN acceptance
-- [ ] Δ `proposal.md` lists one capability per epic, durable names (not work items)
+- [ ] Every story is one line in Δ `proposal.md` What Changes: `US-<AREA>-NN (<Priority> · <Wedge>) As a <persona>…`, no acceptance criteria
+- [ ] Δ `proposal.md` lists one capability per story group, durable names (not work items); Non-goals present
+- [ ] `product` holds only vision, personas, KPIs, assumptions — no stories, scope or OQs
 - [ ] KPIs measurable, not aspirational
 
 ### `analyst` critic (after `openspec validate --strict` passes)
-- [ ] Every story in `01b` is covered by ≥ 1 requirement (`Source: US-…`)
+- [ ] Every story in Δ `proposal.md` is covered by ≥ 1 requirement (`Source: US-…`)
 - [ ] One behaviour per requirement; no "and/or" bundles
 - [ ] Every NFR has a number and a measurement condition in its scenario
 - [ ] Every requirement has error/unauthorised scenarios where it applies, not only the happy path
-- [ ] `Wedge` tags match `01c-wedge.md`; `Wedge: v2` ⇒ `Priority: C`
+- [ ] `Wedge` tags match `openspec/context/wedge.md`; `Wedge: v2` ⇒ `Priority: C`
 - [ ] No `Priority: M` requirement carries `[NEEDS CLARIFICATION]` without an `OQ-` entry in Δ `design.md`
 
 ### `spec-ingest` critic (`--from-spec`)
-- [ ] `ingest-report.md` "Not converted" is empty or every row has a reason
+- [ ] Δ `reports/ingest.md` "Not converted" is empty or every row has a reason
 - [ ] Every source requirement ID appears as a requirement header (spot-check 10 against the source text: meaning unchanged)
 - [ ] Source priorities kept (latest review value); every ⚠️/TBD has an `OQ-`
 - [ ] Verification columns became concrete scenarios, not "Test"
-- [ ] `01c-wedge.md` claims only what the source states; stack flags quote the source
+- [ ] `openspec/context/wedge.md` claims only what the source states; stack flags quote the source
 - [ ] `product_type` and scale tier justified
 
 ### `designer` critic
 - [ ] Architecture matches scale tier (preview ≠ microservices)
-- [ ] Justification for every "we chose X over Y"
-- [ ] Each NFR tied to an architectural decision
-- [ ] §10 traceability matrix has a row per `Priority: M` requirement
+- [ ] Every "we chose X over Y" is in Δ `design.md` Decisions with alternatives; `architecture` has no rationale, stack recap or traceability matrix
+- [ ] Each NFR tied to a decision in Δ `design.md`
 - [ ] Every `Priority: M` requirement is in a Δ `tasks.md` `implements:` list
 - [ ] Every task has an owner tag and `implements:` IDs that exist
 
@@ -970,10 +996,10 @@ break monoculture.
 
 ## Prompt-cache strategy
 
-The "always-read" docs (`00`, `openspec-conventions.md`, `01`, `01b`,
-`01c`, `03`) form a stable prefix from the tech-stack-selector phase
+The "always-read" docs (`tech-stack`, `openspec-conventions.md`, `product-analysis`, `product`,
+`wedge`, `architecture`) form a stable prefix from the tech-stack-selector phase
 onward. `openspec/specs/**` changes only at archive, so it extends the
-prefix; the active change Δ goes last because it is still moving. `00` (the
+prefix; the active change Δ goes last because it is still moving. `tech-stack` (the
 tech-stack contract) goes first because every implementation skill
 reads it first. List them in the same order in every subagent's
 context manifest so the cache hits. Don't interpolate per-phase data
@@ -999,7 +1025,7 @@ Critic gates:    <pass/fail counts>
 Quality gates:   <which passed, which were waived and why>
 Dogfood health:  <final score>
 Spec:            <change> archived; <N> capabilities, <N> requirements (M/S/C)
-Traceability:    Must covered <n>/<m> (docs/11-traceability.md)
+Traceability:    Must covered <n>/<m> (reports/traceability.md)
 Open questions:  <OQ ids deferred, with owners>
 Preview URL:     <or "local-only">
 Next steps:      <iterate cadence; what kill switch to watch>
@@ -1011,13 +1037,15 @@ Run locally:     <state.local_quickstart>     (also in docs/RUN.md)
 `seed-integrity` quality gate. If it is null at completion, the build
 is incomplete — do not print "Build Complete" and surface to the user.
 
-Append a one-line entry to `docs/06-iteration-log.md` as iteration 0.
+There is no iteration log: the archived first change
+(`openspec/changes/archive/<date>-<change>/`, with its `reports/`) is
+iteration 0, and every later iteration is another archived change.
 
 ---
 
 ## Design principles
 
-- **Wedge-driven** — every phase reads `01c-wedge.md`; out-of-wedge
+- **Wedge-driven** — every phase reads `openspec/context/wedge.md`; out-of-wedge
   work is tagged `Wedge: v2`.
 - **Spec-driven (OpenSpec)** — requirements are proposed and validated
   before code, implemented task by task, proven by tagged tests
@@ -1038,5 +1066,5 @@ Append a one-line entry to `docs/06-iteration-log.md` as iteration 0.
   `quality-gates.sh`, `route-failure.sh`, `spec-coverage.sh` are actual
   files in `scripts/`.
 
-See `docs/00-pipeline-research-and-redesign.md` for the rationale and
+See `openspec/context/pipeline-research.md` for the rationale and
 remaining backlog.

@@ -7,11 +7,18 @@ effort: max
 
 # Role: Senior Security Engineer
 
+> **Context files may live elsewhere.** Resolve each `openspec/context/<name>.md`
+> path below with `scripts/context-path.sh <name>` and read the path it prints
+> (it falls back to the legacy `docs/` name or a `state.json` `.context_paths`
+> override). Exit 1 means the file is missing: apply this skill's missing-file
+> rule. Before writing one, run `scripts/context-path.sh --move <name>`.
+> Conventions: `.claude/skills/build-product-v2/openspec-conventions.md` §1.
+
 You are a senior application security engineer. Your job is to perform a systematic security audit of the entire codebase and infrastructure, find vulnerabilities, fix Critical/High severity issues, and document everything.
 
 ## Inputs
 
-- `docs/00-tech-stack.md` — the binding contract; `security.*` (password hashing, secrets manager, CSP, rate limiting) and `auth.*` (provider, session model) define what "correct" means here. Anything in `not_in_stack` found in code is a finding.
+- `openspec/context/tech-stack.md` — the binding contract; `security.*` (password hashing, secrets manager, CSP, rate limiting) and `auth.*` (provider, session model) define what "correct" means here. Anything in `not_in_stack` found in code is a finding.
 - `NFR-SEC-*` requirements from `openspec/specs/**` (usually the `security` capability) plus the active change's deltas (`state/state.json` `.active_change` → `openspec/changes/<change>/specs/**`). Conventions: `.claude/skills/build-product-v2/openspec-conventions.md`.
 
 ## Phase 1 — Dependency Audit
@@ -127,7 +134,14 @@ For Medium/Low issues: document them with recommended fixes but do not auto-fix 
 
 ## Phase 9 — Write Security Audit Report
 
-Write `docs/09-security-audit.md`:
+Resolve `$REPORTS` first (conventions §1 — the active change's `reports/`, or `reports/` when no change is active):
+
+```bash
+CHANGE=$(jq -r '.active_change // empty' state/state.json 2>/dev/null)
+REPORTS="${CHANGE:+openspec/changes/$CHANGE/reports}"; REPORTS="${REPORTS:-reports}"; mkdir -p "$REPORTS"
+```
+
+Write `$REPORTS/security-audit.md`:
 
 ```markdown
 # Security Audit Report
@@ -178,7 +192,7 @@ Write `docs/09-security-audit.md`:
 ## Git Commit & Push
 
 ```
-git add docs/09-security-audit.md
+git add openspec/changes/
 git add -u  # include any security fixes
 git commit -m "feat: add security audit report and fix critical vulnerabilities"
 git push origin HEAD 2>/dev/null || git push --set-upstream origin HEAD 2>/dev/null || true

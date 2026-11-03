@@ -8,30 +8,50 @@ effort: max
 
 # Role: Product Iteration Engineer
 
+> **Context files may live elsewhere.** Resolve each `openspec/context/<name>.md`
+> path below with `scripts/context-path.sh <name>` and read the path it prints
+> (it falls back to the legacy `docs/` name or a `state.json` `.context_paths`
+> override). Exit 1 means the file is missing: apply this skill's missing-file
+> rule. Before writing one, run `scripts/context-path.sh --move <name>`.
+> Conventions: `.claude/skills/build-product-v2/openspec-conventions.md` §1.
+
 You are running an iterative refinement cycle on an existing product. You will discover gaps between what was planned and what was built, find new market requirements, capture them as one OpenSpec change, implement it, verify everything with tests, and archive the change into the specs. This skill can be invoked multiple times — each run is one iteration.
 
 **Focus area (optional):** $ARGUMENTS
 
 ---
 
-## Setup — Determine Iteration Number
+## Setup — Open the Iteration's Change
 
-1. Check if `docs/06-iteration-log.md` exists.
-   - If yes: read it, count existing iterations, this run is N+1.
-   - If no: this is iteration 1. Create the file with a header.
+The archive is the iteration log: every shipped iteration is an
+archived `iter-*` change. Conventions:
+`.claude/skills/build-product-v2/openspec-conventions.md`.
+
+```bash
+export OPENSPEC_TELEMETRY=0 DO_NOT_TRACK=1 OPENSPEC_NO_UPDATE_CHECK=1
+OPENSPEC="npx --yes @fission-ai/openspec@1.15.0"
+N=$(( $(ls -d openspec/changes/archive/*-iter-* 2>/dev/null | wc -l) + 1 ))
+CHANGE="iter-$N-<slug>"           # slug from the focus area, e.g. iter-4-team-accounts; no focus → iter-$N-gaps
+$OPENSPEC new change "$CHANGE"
+scripts/state-set.sh '.active_change' "\"$CHANGE\""
+REPORTS="openspec/changes/$CHANGE/reports"; mkdir -p "$REPORTS"
+```
+
+Read the previous iteration's `reports/gap-analysis.md` (latest
+`openspec/changes/archive/*-iter-*/`) for the gaps it deferred.
 
 ---
 
 ## Phase 1 — Enhanced Market Re-Analysis
 
-1. Read the current `docs/01-market-analysis.md`.
+1. Read the current `openspec/context/product-analysis.md`.
 2. Use `WebSearch` and `WebFetch` to research:
    - New competitors or product launches since the original analysis
    - Updated market trends, pricing changes, regulatory changes
    - User feedback patterns for similar products (Reddit, Product Hunt, G2, forums)
    - If a focus area was provided, deep-dive into that specific aspect
 3. Compare findings against the existing market analysis.
-4. Append an **Iteration N Update** section to `docs/01-market-analysis.md`:
+4. Append an **Iteration N Update** section to `openspec/context/product-analysis.md`:
    ```
    ## Iteration N Update — [date]
    ### New Findings
@@ -51,13 +71,7 @@ You are running an iterative refinement cycle on an existing product. You will d
 ## Phase 2 — Gap Analysis
 
 Perform a systematic comparison between specifications and implementation.
-Requirements live in OpenSpec (`openspec/specs/**`); conventions:
-`.claude/skills/build-product-v2/openspec-conventions.md`.
-
-```bash
-export OPENSPEC_TELEMETRY=0 DO_NOT_TRACK=1 OPENSPEC_NO_UPDATE_CHECK=1
-OPENSPEC="npx --yes @fission-ai/openspec@1.15.0"
-```
+Requirements live in OpenSpec (`openspec/specs/**`).
 
 ### 2a. Requirements vs Implementation
 
@@ -72,8 +86,8 @@ OPENSPEC="npx --yes @fission-ai/openspec@1.15.0"
 
 ### 2b. Design vs Implementation
 
-1. Read `docs/03-system-design.md`.
-2. Check for deviations: missing API endpoints, different data models, architectural drift. Include `api-docs` orphan endpoints and open `OQ-` items from the last archived change.
+1. Read `openspec/context/architecture.md`.
+2. Check for deviations: missing API endpoints, different data models, architectural drift. Include `api-docs` orphan endpoints (`openapi.yaml` vs `openspec/context/architecture.md` §4) and open `OQ-` items from the last archived change's `design.md`.
 
 ### 2c. New Requirements from Market Update
 
@@ -82,7 +96,7 @@ OPENSPEC="npx --yes @fission-ai/openspec@1.15.0"
 
 ### 2d. Write Gap Analysis
 
-Write `docs/06-gap-analysis.md` (create or update):
+Write `$REPORTS/gap-analysis.md`. Cite requirement IDs only — the requirement text is in the specs:
 
 ```markdown
 # Gap Analysis — Iteration N
@@ -102,6 +116,10 @@ Write `docs/06-gap-analysis.md` (create or update):
 | Proposed ID | Requirement | Priority | Source |
 |-------------|-------------|----------|--------|
 | FR-NOM-12 | ... | M / S / C | Market update / Gap analysis |
+
+## Deferred to a later iteration
+| Req / proposed ID | Reason |
+|---|---|
 
 ## Summary
 - Total requirements: X
@@ -124,24 +142,20 @@ New IDs continue the capability's sequence (`FR-NOM-12` after `FR-NOM-11`); neve
 Everything this iteration changes goes through one OpenSpec change. Do
 not edit `openspec/specs/` directly.
 
-### 3a. Open the change
+### 3a. Write the change
 
-```bash
-CHANGE="iter-<N>-<slug>"          # slug from the focus area, e.g. iter-4-team-accounts
-$OPENSPEC new change "$CHANGE"
-scripts/state-set.sh '.active_change' "\"$CHANGE\""
-```
+The change was opened in Setup. If the gap analysis points somewhere
+other than the slug suggests, rename it now (`mv`, then update
+`.active_change`) — before the first validate. Write the artifacts in order, running `$OPENSPEC instructions <artifact> --change "$CHANGE"` before each:
 
-Write the artifacts in order, running `$OPENSPEC instructions <artifact> --change "$CHANGE"` before each:
-
-1. **`proposal.md`** — Why (market finding or gap, wedge sentence), What Changes, Capabilities (new + modified, exact paths from `openspec list --specs`), Impact.
+1. **`proposal.md`** (conventions §5) — Why (market finding or gap, wedge sentence; link `reports/gap-analysis.md`, don't copy its tables), What Changes (new stories as one-liners), Non-goals (the deferred gaps), Capabilities (new + modified, exact paths from `openspec list --specs`), Impact.
 2. **`specs/<capability>/spec.md`** — delta per capability:
    - **ADDED** — new requirements from 2c, with scenarios, `Priority`, `Wedge` and `Source: iter-N market|gap`.
    - **MODIFIED** — Divergent requirements where the code (or the market) is right: copy the whole existing block, then edit.
    - **REMOVED** — requirements the product no longer wants, with `**Reason**:` and `**Migration**:`.
    - **RENAMED** — only when a name is wrong; IDs stay.
-3. **`design.md`** — only if architecture changes; reference and update `docs/03-system-design.md` sections. Unknowns → `## Open Questions` (`OQ-NN`).
-4. **`tasks.md`** — conventions §5 format: Partial/Missing requirements (fix code) and every ADDED/MODIFIED requirement get tasks with `implements:` IDs.
+3. **`design.md`** — only if architecture changes: the decisions and alternatives. Unknowns → `## Open Questions` (`OQ-NN`).
+4. **`tasks.md`** — conventions §6 format: Partial/Missing requirements (fix code) and every ADDED/MODIFIED requirement get tasks with `implements:` IDs; architecture changes get a `[docs]` task that updates the affected `openspec/context/architecture.md` sections.
 
 ### 3b. Validate
 
@@ -150,8 +164,6 @@ $OPENSPEC validate "$CHANGE" --strict --no-interactive
 ```
 
 Fix and re-run until it passes. A `Priority: M` requirement with an open `OQ-` stops the iteration: ask the user (`AskUserQuestion`) before Phase 4.
-
-If `docs/03-system-design.md` changes, edit it now and tag the edited sections `[Iteration N — <change>]`.
 
 **Do not stop. Proceed immediately to Phase 4.**
 
@@ -217,54 +229,33 @@ Run ALL quality checks, not just unit tests. Changes made during iteration may i
 3. Confirm no major performance regressions.
 4. Confirm every task in `tasks.md` is ticked.
 
-### 5g. Archive the change
-Only when 5a–5f are green:
+### 5g. Verification report
+Write `$REPORTS/verification.md` (numbers only; no requirement text):
+
+```markdown
+# Verification — <change>
+- Unit / Integration / Smoke / E2E: X passed, 0 failed
+- Security: no new Critical/High issues
+- Performance: no regressions (bundle Δ, new queries checked)
+- Traceability: Must covered X/X
+- Market findings: openspec/context/product-analysis.md § Iteration N Update
+```
+
+### 5h. Archive the change
+Only when 5a–5g are green:
 
 ```bash
+scripts/spec-coverage.sh                                  # refresh reports/traceability.md
+cp reports/traceability.md "$REPORTS/traceability.md"     # proof at ship time
 $OPENSPEC archive "$CHANGE" --yes
 scripts/state-set.sh '.active_change' 'null'
 scripts/state-decide.sh iterate "archived $CHANGE" "<one-line summary of what became true>"
-scripts/spec-coverage.sh          # refresh docs/11-traceability.md against the merged specs
+scripts/spec-coverage.sh                                  # re-run against the merged specs
 ```
 
-Archive merges the deltas into `openspec/specs/` — this is the step that makes the change true. If archive reports a conflict (a MODIFIED header no longer matches), fix the delta, re-validate, and archive again.
+Archive merges the deltas into `openspec/specs/` — this is the step that makes the change true — and moves the change, with its reports, to `openspec/changes/archive/`. That archived folder is the iteration's record; there is no separate iteration log. If archive reports a conflict (a MODIFIED header no longer matches), fix the delta, re-validate, and archive again.
 
 ---
-
-## Phase 6 — Update Iteration Log
-
-Append to `docs/06-iteration-log.md`:
-
-```markdown
-## Iteration N — [date]
-
-### Market Findings
-- [key new findings]
-
-### Change
-- `openspec/changes/archive/<date>-<change>/` — ADDED X, MODIFIED X, REMOVED X
-
-### Gaps Addressed
-- [list of gaps closed with their requirement IDs]
-
-### New Features Implemented
-- [list of new features with requirement and task IDs]
-
-### Remaining Gaps
-- [list of gaps deferred to next iteration]
-
-### Test Results
-- Unit: X passed, 0 failed
-- Integration: X passed, 0 failed
-- Smoke: X passed, 0 failed
-- E2E: X passed, 0 failed
-- Security: no new Critical/High issues
-- Performance: no regressions
-- Traceability: Must covered X/X (docs/11-traceability.md)
-
-### Files Changed
-- [list of key files added/modified]
-```
 
 ## Git Commit & Push
 
@@ -285,7 +276,7 @@ Print a summary:
 
 - Market re-analysis:    ✅  [X new findings]
 - Gap analysis:          ✅  [X gaps found, Y addressed]
-- Change:                ✅  [change name] archived (+X ~Y -Z requirements)
+- Change:                ✅  [change name] archived (+X ~Y -Z requirements) → openspec/changes/archive/<date>-<change>/
 - Implementation:        ✅  [X tasks completed]
 - Test suite:            ✅  all passing
 - Traceability:          ✅  Must covered X/X

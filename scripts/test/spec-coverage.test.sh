@@ -92,8 +92,19 @@ OUT="$(run "$G")"; RC=$?
 H="$(project write)"
 echo "test('@FR-A-01 › Works', () => {});" > "$H/e2e/alpha.spec.ts"
 bash "$SC" --root "$H" >/dev/null 2>&1
-[[ -f "$H/state/artifacts/traceability.json" && -f "$H/docs/11-traceability.md" ]] && ok "writes traceability.json and docs/11-traceability.md" || bad "write" "$(ls "$H" "$H/docs" 2>&1)"
-grep -q "| FR-A-01 | M | tagged |" "$H/docs/11-traceability.md" && ok "markdown matrix has the row" || bad "md" "$(cat "$H/docs/11-traceability.md")"
+[[ -f "$H/state/artifacts/traceability.json" && -f "$H/reports/traceability.md" ]] && ok "writes traceability.json and reports/traceability.md" || bad "write" "$(ls "$H" "$H/reports" 2>&1)"
+grep -q "| FR-A-01 | M | tagged |" "$H/reports/traceability.md" && ok "markdown matrix has the row" || bad "md" "$(cat "$H/reports/traceability.md")"
+[[ ! -e "$H/docs" ]] && ok "writes nothing under docs/" || bad "docs" "$(ls "$H/docs")"
+
+# I: split IDs from spec-ingest (FR-A-01a / FR-A-01b) are distinct requirements
+I="$(project split)"
+{ echo; req FR-A-04a M; req FR-A-04b M; } >> "$I/openspec/specs/alpha/spec.md"
+printf "test('@FR-A-01 › Works', () => {});\ntest('@FR-A-04a › First half', () => {});\n" > "$I/e2e/alpha.spec.ts"
+mkdir -p "$I/reports/test-results"
+echo '{"suites":[{"title":"alpha","specs":[{"title":"@FR-A-01 › Works","tests":[{"status":"expected"}]},{"title":"@FR-A-04a › First half","tests":[{"status":"expected"}]}]}]}' > "$I/reports/test-results/playwright.json"
+OUT="$(run "$I")"; RC=$?
+[[ "$(state_of "$OUT" FR-A-04a)" == "passing" ]] && ok "split ID FR-A-04a is traced on its own" || bad "FR-A-04a" "$(state_of "$OUT" FR-A-04a)"
+[[ "$(state_of "$OUT" FR-A-04b)" == "uncovered" && "$RC" -ne 0 ]] && ok "FR-A-04b is not covered by FR-A-04a's test" || bad "FR-A-04b" "$RC $(state_of "$OUT" FR-A-04b)"
 
 echo
 echo "spec-coverage: $PASS passed, $FAIL failed"

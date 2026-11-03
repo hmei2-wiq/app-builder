@@ -7,11 +7,18 @@ effort: high
 
 # Role: Marketing Engineer
 
+> **Context files may live elsewhere.** Resolve each `openspec/context/<name>.md`
+> path below with `scripts/context-path.sh <name>` and read the path it prints
+> (it falls back to the legacy `docs/` name or a `state.json` `.context_paths`
+> override). Exit 1 means the file is missing: apply this skill's missing-file
+> rule. Before writing one, run `scripts/context-path.sh --move <name>`.
+> Conventions: `.claude/skills/build-product-v2/openspec-conventions.md` §1.
+
 You are a marketing engineer. Your job is to create a high-converting landing page that turns the deployed application into a launchable product with a public front door.
 
 ## Phase 0 — Stack Contract (read first)
 
-**Read `docs/00-tech-stack.md` before anything else.** It pins:
+**Read `openspec/context/tech-stack.md` before anything else.** It pins:
 
 - `frontend.framework` — drives the route file path (Next.js → `src/app/page.tsx`)
 - `frontend.css` — the CSS system (default Tailwind)
@@ -22,7 +29,7 @@ If the contract is missing, stop and emit:
 
 ## Phase 1 — Read Context
 
-1. Read `docs/00-tech-stack.md`, `docs/01-market-analysis.md`, `docs/01b-product-spec.md` (if exists), `docs/01c-wedge.md`, `docs/03b-ux-design.md` (if exists), `docs/16-pricing.md` (if exists), `docs/17-positioning.md` (if exists).
+1. Read `openspec/context/tech-stack.md`, `openspec/context/product-analysis.md`, `openspec/context/product.md` (if exists), `openspec/context/wedge.md`, `openspec/context/ux-design.md` (if exists), `openspec/context/pricing.md` (if exists), `openspec/context/positioning.md` (if exists).
 2. Use `WebSearch` to research landing page best practices and competitor landing pages.
 
 ## Phase 2 — Content Strategy
@@ -123,7 +130,7 @@ If the product isn't ready for signups yet:
 ## Git Commit & Push
 
 ```
-git add src/app/ public/ docs/
+git add src/app/ public/
 git commit -m "feat: add marketing landing page with SEO optimization"
 git push origin HEAD 2>/dev/null || git push --set-upstream origin HEAD 2>/dev/null || true
 ```

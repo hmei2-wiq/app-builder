@@ -44,7 +44,7 @@ The four mandatory human checkpoints are non-skippable.
 ## Stack contract
 
 `differentiation` emits stack constraints. `tech-stack-selector` writes
-`docs/00-tech-stack.md` — the binding contract every downstream agent
+`openspec/context/tech-stack.md` — the binding contract every downstream agent
 reads. CI/CD defaults to **Buildkite** (cost-effective; org has
 `$BK_API_TOKEN`); GitHub Actions / GitLab CI are alternatives, opted
 into via the contract.

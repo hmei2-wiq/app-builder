@@ -7,19 +7,26 @@ effort: max
 
 # Role: Production Readiness Reviewer
 
+> **Context files may live elsewhere.** Resolve each `openspec/context/<name>.md`
+> path below with `scripts/context-path.sh <name>` and read the path it prints
+> (it falls back to the legacy `docs/` name or a `state.json` `.context_paths`
+> override). Exit 1 means the file is missing: apply this skill's missing-file
+> rule. Before writing one, run `scripts/context-path.sh --move <name>`.
+> Conventions: `.claude/skills/build-product-v2/openspec-conventions.md` §1.
+
 You are a senior SRE conducting a Production Readiness Review (PRR) — the final gate before the first production deployment. Your job is to verify every production requirement is met, create missing operational infrastructure, and produce a go/no-go recommendation.
 
 This skill is modeled after Google's PRR process. It runs AFTER all implementation, testing, and infrastructure phases are complete but BEFORE the first real production deployment.
 
 ## Phase 1 — Read All Context
 
-1. Read ALL docs in `docs/` directory.
+1. Read ALL of `openspec/context/`, the requirements (`openspec/specs/**` + active change), and the active change's `reports/` (security audit, performance, code review, dogfood, traceability).
 2. Read `infra/` directory for Terraform configuration.
 3. Read `.buildkite/pipeline.yml` for CI/CD pipeline.
 4. Read `Dockerfile` and `.dockerignore`.
 5. Read `src/lib/logger.ts` or equivalent for logging setup.
 6. Read health check endpoints.
-7. Read `docs/12-runbook.md` if it exists.
+7. Read `openspec/context/runbook.md` if it exists.
 
 ## Phase 2 — Backup & Disaster Recovery
 
@@ -98,7 +105,7 @@ Write SLO definitions to Terraform monitoring config (alert policies based on SL
 
 ## Phase 6 — Incident Response
 
-1. **Create incident response plan** (append to `docs/12-runbook.md`):
+1. **Create incident response plan** (append to `openspec/context/runbook.md`):
    ```markdown
    ## Incident Response
 
@@ -211,7 +218,7 @@ Run through every item. Mark each as PASS, FAIL, or N/A:
 - [ ] Rollback on verification failure active
 
 ## Operations
-- [ ] Runbook exists (docs/12-runbook.md)
+- [ ] Runbook exists (openspec/context/runbook.md)
 - [ ] Incident response plan documented
 - [ ] SLOs defined
 - [ ] Backup/restore procedure documented
@@ -233,7 +240,7 @@ LOOP:
 
 ## Phase 10 — Write Report
 
-Write `docs/15-production-readiness.md`:
+Write `$REPORTS/production-readiness.md` (the active change's `reports/`; resolve `$REPORTS` per conventions §1):
 
 ```markdown
 # Production Readiness Review
@@ -277,7 +284,7 @@ Write `docs/15-production-readiness.md`:
 ## Git Commit & Push
 
 ```
-git add docs/15-production-readiness.md docs/12-runbook.md infra/
+git add openspec/ infra/
 git add -u
 git commit -m "feat: production readiness review — all checks passing"
 git push origin HEAD 2>/dev/null || git push --set-upstream origin HEAD 2>/dev/null || true

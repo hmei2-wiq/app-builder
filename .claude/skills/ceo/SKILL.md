@@ -1,12 +1,19 @@
 ---
 name: ceo
-description: CEO role — takes a product idea as input, performs web-based market research and competitor analysis, writes a detailed market analysis report to docs/01-market-analysis.md
+description: CEO role — takes a product idea as input, performs web-based market research and competitor analysis, writes a detailed market analysis report to openspec/context/product-analysis.md
 argument-hint: "<product idea>"
 allowed-tools: WebSearch, WebFetch, Write, Read, Bash
 effort: high
 ---
 
 # Role: CEO / Market Analyst
+
+> **Context files may live elsewhere.** Resolve each `openspec/context/<name>.md`
+> path below with `scripts/context-path.sh <name>` and read the path it prints
+> (it falls back to the legacy `docs/` name or a `state.json` `.context_paths`
+> override). Exit 1 means the file is missing: apply this skill's missing-file
+> rule. Before writing one, run `scripts/context-path.sh --move <name>`.
+> Conventions: `.claude/skills/build-product-v2/openspec-conventions.md` §1.
 
 You are an experienced CEO and market strategist. Your job is to evaluate the following product idea and produce a thorough market analysis report.
 
@@ -32,7 +39,7 @@ You are an experienced CEO and market strategist. Your job is to evaluate the fo
 
 ## Output
 
-Create the directory `docs/` if it does not exist, then write the full report to `docs/01-market-analysis.md`.
+Create the directory `openspec/context/` if it does not exist, then write the full report to `openspec/context/product-analysis.md`.
 
 Structure the report as follows:
 
@@ -57,12 +64,12 @@ Be specific, cite sources where found, and include data points. Do not be vague 
 
 ## Git Commit & Push
 
-After `docs/01-market-analysis.md` is written successfully:
+After `openspec/context/product-analysis.md` is written successfully:
 
 1. Ensure the directory is a git repository. If not, run `git init`.
 2. Stage and commit:
    ```
-   git add docs/01-market-analysis.md
+   git add openspec/context/product-analysis.md
    git commit -m "feat: add market analysis report"
    ```
 3. If a remote named `origin` exists, push: `git push origin HEAD`. If the upstream is not set, run `git push --set-upstream origin HEAD`.

@@ -7,11 +7,18 @@ effort: max
 
 # Role: Senior Backend Developer
 
+> **Context files may live elsewhere.** Resolve each `openspec/context/<name>.md`
+> path below with `scripts/context-path.sh <name>` and read the path it prints
+> (it falls back to the legacy `docs/` name or a `state.json` `.context_paths`
+> override). Exit 1 means the file is missing: apply this skill's missing-file
+> rule. Before writing one, run `scripts/context-path.sh --move <name>`.
+> Conventions: `.claude/skills/build-product-v2/openspec-conventions.md` §1.
+
 You are a senior backend developer. Your job is to implement all server-side functionality: API routes, database operations, authentication, authorization, business logic, and background processing. You will not stop until every planned backend task is implemented and every test passes.
 
 ## Phase 0 — Stack Contract (read first)
 
-**Read `docs/00-tech-stack.md` before anything else.** It is the
+**Read `openspec/context/tech-stack.md` before anything else.** It is the
 binding contract for every vendor, framework, and version this skill
 will use. Specifically, you will source from the contract:
 
@@ -39,7 +46,7 @@ picking a vendor.
 
 Follow `.claude/skills/build-product-v2/openspec-conventions.md` (requirement format, tasks.md format, test tagging). The active change is `state/state.json` `.active_change`; call it `<change>`.
 
-1. Read `docs/00-tech-stack.md`, `docs/01c-wedge.md`, and `docs/03-system-design.md` in full, then the active change: `openspec/changes/<change>/proposal.md`, `design.md`, `tasks.md`, and its delta specs (`$OPENSPEC show <change> --json --deltas-only`), plus every affected `openspec/specs/<capability>/spec.md` (`$OPENSPEC show <cap> --type spec --json`). `OPENSPEC` and its env vars are defined in the conventions file §2.
+1. Read `openspec/context/tech-stack.md`, `openspec/context/wedge.md`, and `openspec/context/architecture.md` in full, then the active change: `openspec/changes/<change>/proposal.md`, `design.md`, `tasks.md`, and its delta specs (`$OPENSPEC show <change> --json --deltas-only`), plus every affected `openspec/specs/<capability>/spec.md` (`$OPENSPEC show <cap> --type spec --json`). `OPENSPEC` and its env vars are defined in the conventions file §2.
 2. Work from the `[backend]` tasks in `openspec/changes/<change>/tasks.md` (and `[db]` / `[auth]` tasks if `db-migrator` / `auth-engineer` did not run):
    - If a task you need is missing, append it in the tasks.md format (`- [ ] X.Y [backend] <desc> — implements: <IDs>`) before coding; if the behaviour is new, add an ADDED/MODIFIED delta to the change's `specs/` and re-run `$OPENSPEC validate <change> --strict --no-interactive`.
    - Refuse work that maps to no task.

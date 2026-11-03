@@ -4,7 +4,7 @@
 # Reads requirement headers from openspec/specs/**/spec.md and from the
 # delta specs of active changes (openspec/changes/*/specs/**, archive
 # excluded), then scans test files for @FR-…/@NFR-… tags. See
-# .claude/skills/build-product-v2/openspec-conventions.md §3 and §6.
+# .claude/skills/build-product-v2/openspec-conventions.md §3 and §7.
 #
 # Fails (exit 1) when:
 #   - a requirement header has no FR-/NFR- ID, or no "Priority:" line
@@ -15,7 +15,7 @@
 # Runner results (optional): Playwright / Vitest / Jest JSON reports in
 # reports/test-results/*.json (override with --results a.json,b.json).
 #
-# Writes state/artifacts/traceability.json and docs/11-traceability.md
+# Writes state/artifacts/traceability.json and reports/traceability.md
 # unless --no-write. --json prints the JSON report to stdout.
 #
 #   scripts/spec-coverage.sh
@@ -50,7 +50,8 @@ if [[ ! -d openspec ]]; then
   exit 0
 fi
 
-TAG_RE='@(FR|NFR)-[A-Z0-9]+-[0-9]+'
+# IDs may carry a split suffix from spec-ingest (FR-NOM-01a).
+TAG_RE='@(FR|NFR)-[A-Z0-9]+-[0-9]+[a-z]?'
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 
 # ---- 1. requirements: id \t priority \t status \t file ----
@@ -71,7 +72,7 @@ parse_spec() {
       flush()
       if (sec == "other") next
       hdr = $0; sub(/^### +Requirement: */, "", hdr)
-      if (match(hdr, /^(FR|NFR)-[A-Z0-9]+-[0-9]+/)) id = substr(hdr, RSTART, RLENGTH)
+      if (match(hdr, /^(FR|NFR)-[A-Z0-9]+-[0-9]+[a-z]?/)) id = substr(hdr, RSTART, RLENGTH)
       else { id = "?" hdr; gsub(/\t/, " ", id) }
       pri = "?"; inreq = 1
       next
@@ -153,7 +154,7 @@ REPORT="$(jq -n \
   | ($reqs | map(select(.status == "active")) | map(
       . as $r
       | ($tags | map(select(.id == $r.id))) as $t
-      | ($results | map(select(.title | test("@" + $r.id + "(?![0-9])")))) as $res
+      | ($results | map(select(.title | test("@" + $r.id + "(?![0-9a-z])")))) as $res
       | {id, priority, files,
          tests: ($t | map(.at)),
          live_tests: ($t | map(select(.skipped | not)) | length),
@@ -185,7 +186,7 @@ REPORT="$(jq -n \
 ')"
 
 if [[ "$WRITE" -eq 1 ]]; then
-  mkdir -p state/artifacts docs
+  mkdir -p state/artifacts reports
   echo "$REPORT" > state/artifacts/traceability.json
   {
     echo "# Requirements Traceability"
@@ -202,7 +203,7 @@ if [[ "$WRITE" -eq 1 ]]; then
       echo "## Failures"
       jq -r '.failures[] | "- \(.)"' <<< "$REPORT"
     fi
-  } > docs/11-traceability.md
+  } > reports/traceability.md
 fi
 
 if [[ "$JSON" -eq 1 ]]; then

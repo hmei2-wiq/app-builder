@@ -1,11 +1,18 @@
 ---
 name: perf-tester
-description: Performance Engineer — analyzes bundle sizes, generates k6 load tests, identifies N+1 queries, checks missing DB indexes, optimizes critical paths, and writes docs/10-performance-report.md
+description: Performance Engineer — analyzes bundle sizes, generates k6 load tests, identifies N+1 queries, checks missing DB indexes, optimizes critical paths, and writes a performance report to the active change's reports/
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 effort: max
 ---
 
 # Role: Senior Performance Engineer
+
+> **Context files may live elsewhere.** Resolve each `openspec/context/<name>.md`
+> path below with `scripts/context-path.sh <name>` and read the path it prints
+> (it falls back to the legacy `docs/` name or a `state.json` `.context_paths`
+> override). Exit 1 means the file is missing: apply this skill's missing-file
+> rule. Before writing one, run `scripts/context-path.sh --move <name>`.
+> Conventions: `.claude/skills/build-product-v2/openspec-conventions.md` §1.
 
 You are a senior performance engineer. Your job is to establish performance baselines, identify bottlenecks, optimize critical paths, and ensure the application meets its NFR performance targets.
 
@@ -18,7 +25,7 @@ You are a senior performance engineer. Your job is to establish performance base
    $OPENSPEC show performance --type spec --json
    ```
    Every number below (k6 thresholds, VUs, bundle and latency targets) comes from these NFRs. The hardcoded values in this skill are **fallbacks only**, used when no NFR covers that metric — mark them `default` in the report. Conventions: `.claude/skills/build-product-v2/openspec-conventions.md`.
-2. Read `docs/03-system-design.md` for architecture and caching strategy.
+2. Read `openspec/context/architecture.md` for architecture and caching strategy.
 3. Read `package.json` for build scripts and dependencies.
 
 ## Phase 2 — Bundle Analysis
@@ -87,7 +94,7 @@ Each test script:
 1. Authenticates (login endpoint)
 2. Exercises the critical user flow (create, read, update, list, search)
 3. Asserts response times and error rates against thresholds
-4. Wraps each measured flow in a k6 `group` tagged with the NFR it verifies (conventions §6), e.g. `group('@NFR-PERF-02 › Switch week under peak', () => { … })`, so `scripts/spec-coverage.sh` traces it. Per-NFR thresholds go on tagged metrics (`'http_req_duration{group:::@NFR-PERF-02 › …}': ['p(95)<…']`).
+4. Wraps each measured flow in a k6 `group` tagged with the NFR it verifies (conventions §7), e.g. `group('@NFR-PERF-02 › Switch week under peak', () => { … })`, so `scripts/spec-coverage.sh` traces it. Per-NFR thresholds go on tagged metrics (`'http_req_duration{group:::@NFR-PERF-02 › …}': ['p(95)<…']`).
 
 ### `perf/run-perf-tests.sh`:
 ```bash
@@ -134,7 +141,14 @@ Apply optimizations for issues found:
 
 ## Phase 8 — Write Performance Report
 
-Write `docs/10-performance-report.md`:
+Resolve `$REPORTS` first (conventions §1 — the active change's `reports/`, or `reports/` when no change is active):
+
+```bash
+CHANGE=$(jq -r '.active_change // empty' state/state.json 2>/dev/null)
+REPORTS="${CHANGE:+openspec/changes/$CHANGE/reports}"; REPORTS="${REPORTS:-reports}"; mkdir -p "$REPORTS"
+```
+
+Write `$REPORTS/performance.md`:
 
 ```markdown
 # Performance Report
@@ -165,7 +179,7 @@ Write `docs/10-performance-report.md`:
 | Load | NFR-PERF-NN | 50 | 5m | ... | ... | ✅ |
 | Stress | NFR-PERF-NN | 200 | 5m | ... | ... | ⚠️ |
 
-An `NFR-PERF-*` requirement whose threshold is missed is a failing finding; route it to its implementer. If the NFR's number itself is wrong, propose a MODIFIED delta in the active change (conventions §7) — never edit `openspec/specs/`.
+An `NFR-PERF-*` requirement whose threshold is missed is a failing finding; route it to its implementer. If the NFR's number itself is wrong, propose a MODIFIED delta in the active change (conventions §8) — never edit `openspec/specs/`.
 
 ## Optimizations Applied
 1. ...
@@ -177,7 +191,7 @@ An `NFR-PERF-*` requirement whose threshold is missed is a failing finding; rout
 ## Git Commit & Push
 
 ```
-git add perf/ docs/10-performance-report.md
+git add perf/ openspec/changes/
 git add -u  # include optimization fixes
 git commit -m "feat: add performance tests, optimizations, and performance report"
 git push origin HEAD 2>/dev/null || git push --set-upstream origin HEAD 2>/dev/null || true

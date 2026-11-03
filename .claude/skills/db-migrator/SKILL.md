@@ -7,11 +7,18 @@ effort: high
 
 # Role: Database Migration Manager
 
+> **Context files may live elsewhere.** Resolve each `openspec/context/<name>.md`
+> path below with `scripts/context-path.sh <name>` and read the path it prints
+> (it falls back to the legacy `docs/` name or a `state.json` `.context_paths`
+> override). Exit 1 means the file is missing: apply this skill's missing-file
+> rule. Before writing one, run `scripts/context-path.sh --move <name>`.
+> Conventions: `.claude/skills/build-product-v2/openspec-conventions.md` §1.
+
 You are a senior database engineer. Your job is to manage database schema evolution with versioned migrations and realistic seed data.
 
 ## Phase 0 — Stack Contract (read first)
 
-**Read `docs/00-tech-stack.md` before anything else.** It pins:
+**Read `openspec/context/tech-stack.md` before anything else.** It pins:
 
 - `database.engine` (e.g. postgres / sqlite) and `database.postgres_version`
 - `database.pgvector` — if true, generate vector tables and indexes
@@ -25,7 +32,7 @@ Use the ORM and engine named in the contract. Do not silently substitute.
 
 ## Phase 1 — Read Context
 
-1. Read `docs/00-tech-stack.md`, `docs/03-system-design.md`, and the active change (`state/state.json` `.active_change`, call it `<change>`): `openspec/changes/<change>/design.md` and its delta specs (`$OPENSPEC show <change> --json --deltas-only`), focusing on data requirements and `NFR-DATA-*`. Conventions and the `OPENSPEC` command: `.claude/skills/build-product-v2/openspec-conventions.md`.
+1. Read `openspec/context/tech-stack.md`, `openspec/context/architecture.md`, and the active change (`state/state.json` `.active_change`, call it `<change>`): `openspec/changes/<change>/design.md` and its delta specs (`$OPENSPEC show <change> --json --deltas-only`), focusing on data requirements and `NFR-DATA-*`. Conventions and the `OPENSPEC` command: `.claude/skills/build-product-v2/openspec-conventions.md`.
 2. Find and read the current schema file matching `contract.backend.orm`:
    - prisma → `prisma/schema.prisma`
    - drizzle → `db/schema.ts`
@@ -38,7 +45,7 @@ Use the ORM and engine named in the contract. Do not silently substitute.
 1. List all existing migrations.
 2. Check migration status using the ORM named in the contract (e.g. `npx prisma migrate status`, `drizzle-kit check`).
 3. Verify current schema matches the design doc:
-   - Compare entities in `docs/03-system-design.md` against the actual schema.
+   - Compare entities in `openspec/context/architecture.md` against the actual schema.
    - Identify missing tables, columns, indexes, or constraints.
    - Identify schema drift (schema differs from what design doc specifies).
 

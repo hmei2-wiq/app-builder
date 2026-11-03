@@ -151,7 +151,7 @@ monoculture.
 flowchart LR
     Prod(["<b>Producer phase</b><br/>e.g. ceo / differentiation /<br/>product-spec / designer /<br/>ux-designer / pricing / positioning /<br/>tech-stack-selector"]):::prod
 
-    Prod --> Art["docs/NN-artifact.md"]:::art
+    Prod --> Art["openspec/context/*.md"]:::art
 
     Art --> Crit["<b>Critic subagent</b><br/>spawned via Task()<br/>different model from producer<br/>invokes /codex or hardcoded checklist"]:::crit
 
@@ -366,16 +366,16 @@ flowchart TB
 
     P4 --> P5{"Phase 5<br/>Kill switch<br/>tripped?<br/>(demand · build · defensibility)"}:::q
 
-    P5 -->|"yes"| Kill(["STOP iteration loop<br/>write kill-switch-tripped.md<br/>recommend: pivot · narrow ·<br/>shutdown → surface to user"]):::kill
+    P5 -->|"yes"| Kill(["STOP iteration loop<br/>rename change → iter-N-signal-kill-switch<br/>(skip_specs) · recommend: pivot · narrow ·<br/>shutdown → surface to user"]):::kill
     P5 -->|"no"| P6
 
-    P6["Phase 6 · Plan & Implement<br/>append [Iteration N — signal-driven]<br/>to dev-plan · spawn backend or<br/>frontend implementer"]:::phase
+    P6["Phase 6 · Plan & Implement<br/>deltas + tasks in the change<br/>validate --strict · spawn backend or<br/>frontend implementer"]:::phase
 
     P6 --> QG["quality-gates<br/>+ dogfood"]:::gate
 
     QG --> P7["Phase 7 · Instrument the test<br/>add PostHog event ·<br/>write success-metric query"]:::phase
 
-    P7 --> P8["Phase 8 · Iteration log<br/>append to docs/06-iteration-log.md<br/>(Measured lift left blank — N+1<br/>fills it in: this is the self-correction)"]:::phase
+    P7 --> P8["Phase 8 · Archive the change<br/>openspec/changes/archive/ is the log<br/>(N+1 measures the lift in its own<br/>reports: this is the self-correction)"]:::phase
 
     P8 --> Wait(["wait 14 days<br/>or until signals move"]):::wait
     Wait -.->|"next cycle reads<br/>last cycle's metric"| Start
@@ -417,9 +417,9 @@ closes many gaps at once.
 flowchart TB
     Start(["iterate<br/>per-invocation · calendar cadence"]):::start
 
-    Start --> Setup["Setup · count prior iterations<br/>read docs/06-iteration-log.md<br/>(this run = N+1, or N=1 if absent)"]:::phase
+    Start --> Setup["Setup · N = archived iter-* changes + 1<br/>open change iter-N-slug<br/>read last gap-analysis report"]:::phase
 
-    Setup --> P1["Phase 1 · Market re-analysis<br/>WebSearch + WebFetch ·<br/>new competitors · trends ·<br/>pricing · regulatory · forums<br/>append Iteration N Update to<br/>docs/01-market-analysis.md"]:::phase
+    Setup --> P1["Phase 1 · Market re-analysis<br/>WebSearch + WebFetch ·<br/>new competitors · trends ·<br/>pricing · regulatory · forums<br/>append Iteration N Update to<br/>openspec/context/product-analysis.md"]:::phase
 
     P1 --> P2sub
 
@@ -428,12 +428,12 @@ flowchart TB
         P2a["2a · Requirements vs impl<br/>scan FR-xxx / NFR-xxx ·<br/>classify Implemented · Partial ·<br/>Missing · Divergent"]:::phase
         P2b["2b · Design vs impl<br/>missing endpoints · model drift ·<br/>architectural deviation"]:::phase
         P2c["2c · New requirements from market<br/>derive · prioritize<br/>(must · should · nice)"]:::phase
-        P2d["2d · Write docs/06-gap-analysis.md<br/>coverage matrix + new-req table"]:::phase
+        P2d["2d · Write change reports/gap-analysis.md<br/>coverage matrix + new-req table"]:::phase
 
         P2a --> P2b --> P2c --> P2d
     end
 
-    P2sub --> P3["Phase 3 · Plan updates<br/>append [Iteration N] tagged entries:<br/>02-system-requirements.md ·<br/>03-system-design.md ·<br/>04-dev-plan.md<br/>(never modify existing entries)"]:::phase
+    P2sub --> P3["Phase 3 · Propose the change<br/>proposal · ADDED / MODIFIED / REMOVED<br/>deltas · design · tasks<br/>validate --strict"]:::phase
 
     P3 --> P4["Phase 4 · Implementation loop<br/>per task: implement →<br/>write/update tests →<br/>fix until green → mark ✅<br/>(do not advance until tests pass)"]:::phase
 
@@ -450,7 +450,7 @@ flowchart TB
         V1 --> V2 --> V3 --> V4 --> V5
     end
 
-    P5sub --> P6["Phase 6 · Iteration log<br/>append to docs/06-iteration-log.md<br/>(findings · gaps closed · features ·<br/>remaining · test results)<br/>git commit + push"]:::phase
+    P5sub --> P6["5g–5h · reports/verification.md<br/>snapshot traceability · archive<br/>(the archived change is the log)<br/>git commit + push"]:::phase
 
     P6 --> Done(["next invocation<br/>= iteration N+1"]):::start
 
@@ -467,9 +467,9 @@ flowchart TB
 | Starting point | market re-scan (imagination) | user behavior (evidence) |
 | Required inputs | spec docs + shipped product | shipped product + ≥1 wired signal source |
 | Scope per cycle | many gaps closed | **one change**, alternatives rejected with reasons |
-| Output artifact | `06-gap-analysis.md` + plan deltas | `iteration-N/the-one-change.md` + PostHog query |
+| Output artifact | change `iter-N-<slug>` (+ `reports/gap-analysis.md`) | change `iter-N-signal-<slug>` (proposal = the one change + PostHog query) |
 | Kill authority | none | **can recommend pivot / shutdown** |
-| Self-correction | iteration log narrative | N+1 fills last cycle's "Measured lift" |
+| Self-correction | next run reads the last archived gap analysis | N+1 measures last cycle's lift in its own `reports/` |
 | When to use | pre-traction · no telemetry | post-traction · real users |
 | Pipeline role | fallback when no signals exist | canonical Phase 20 recurring loop |
 

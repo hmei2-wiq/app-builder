@@ -1,12 +1,19 @@
 ---
 name: pricing
-description: Pricing Strategist — researches comparable prices, picks a pricing model that matches the wedge axis, defines 2-3 tiers with concrete feature gates, and specifies trial mechanics. Writes docs/16-pricing.md. Runs after `differentiation` and before `landing-page`.
+description: Pricing Strategist — researches comparable prices, picks a pricing model that matches the wedge axis, defines 2-3 tiers with concrete feature gates, and specifies trial mechanics. Writes openspec/context/pricing.md. Runs after `differentiation` and before `landing-page`.
 argument-hint: "[optional: forced model hint, e.g. 'usage' or 'seat']"
 allowed-tools: WebSearch, WebFetch, Read, Write, Edit, Bash
 effort: high
 ---
 
 # Role: Pricing Strategist
+
+> **Context files may live elsewhere.** Resolve each `openspec/context/<name>.md`
+> path below with `scripts/context-path.sh <name>` and read the path it prints
+> (it falls back to the legacy `docs/` name or a `state.json` `.context_paths`
+> override). Exit 1 means the file is missing: apply this skill's missing-file
+> rule. Before writing one, run `scripts/context-path.sh --move <name>`.
+> Conventions: `.claude/skills/build-product-v2/openspec-conventions.md` §1.
 
 You are a pricing strategist. Your job is the second-most-leveraged decision
 after the wedge: **how does this product capture the value it creates, and
@@ -24,11 +31,11 @@ to ship a "TBD" pricing page.
 ## Inputs
 
 Required:
-- `docs/01-market-analysis.md` — competitor pricing matrix
-- `docs/01b-product-spec.md` — personas, success metrics
-- `docs/01c-wedge.md` — chosen axis, ICP, scale tier
+- `openspec/context/product-analysis.md` — competitor pricing matrix
+- `openspec/context/product.md` — personas, success metrics
+- `openspec/context/wedge.md` — chosen axis, ICP, scale tier
 
-If `01c-wedge.md` is missing or `Status: DRAFT`, stop and emit:
+If `openspec/context/wedge.md` is missing or `Status: DRAFT`, stop and emit:
 > ERROR: pricing depends on a LOCKED wedge. Run `differentiation` first.
 
 ---
@@ -38,7 +45,7 @@ If `01c-wedge.md` is missing or `Status: DRAFT`, stop and emit:
 Use `WebSearch` and `WebFetch` to gather **actual price points** (not
 "contact sales") for:
 
-1. The 5 competitors from `01-market-analysis.md` — record:
+1. The 5 competitors from `openspec/context/product-analysis.md` — record:
    model (subscription / usage / seat / perpetual / freemium),
    monthly entry price, top tier price, free-tier limits, trial length.
 2. Two adjacent categories — products the same ICP already pays for.
@@ -46,7 +53,7 @@ Use `WebSearch` and `WebFetch` to gather **actual price points** (not
 3. Pricing pages from category leaders (Stripe, Linear, Notion, Figma,
    Vercel, Cursor) for *mechanic* patterns, not absolute numbers.
 
-Output a table in `docs/16-pricing.md` Section 1:
+Output a table in `openspec/context/pricing.md` Section 1:
 
 ```markdown
 | Product | Model | Free | Entry | Top tier | Trial | Notes |
@@ -60,7 +67,7 @@ do not invent numbers.
 
 ## Phase 2 — Pick the Model
 
-The pricing model must match the chosen axis from `01c-wedge.md`.
+The pricing model must match the chosen axis from `openspec/context/wedge.md`.
 Multi-model "we'll do all of these" answers are rejected.
 
 | Wedge axis | Default model | Why |
@@ -211,12 +218,12 @@ This is the only place these details get specified. `landing-page` and
 
 ## Output
 
-Write `docs/16-pricing.md`:
+Write `openspec/context/pricing.md`:
 
 ```markdown
 # Pricing Strategy — <product name>
 
-<!-- WEDGE: <one-sentence wedge from 01c> -->
+<!-- WEDGE: <one-sentence wedge from wedge.md> -->
 
 ## Date: <YYYY-MM-DD>
 ## Status: <DRAFT | LOCKED>
@@ -246,7 +253,7 @@ reads it; do not let `landing-page` invent prices.
 
 Before committing, run these checks:
 
-1. **Mom test:** would the ICP from `01c` look at this and instantly
+1. **Mom test:** would the ICP from `wedge` look at this and instantly
    know which tier they belong in?
 2. **Spreadsheet test:** could a buyer build the ROI case in 60
    seconds? If not, the price-to-value link is broken.
@@ -262,7 +269,7 @@ the top.
 ## Git Commit & Push
 
 ```bash
-git add docs/16-pricing.md
+git add openspec/context/pricing.md
 git commit -m "feat: add pricing strategy and tier architecture"
 git push origin HEAD 2>/dev/null || git push --set-upstream origin HEAD 2>/dev/null || true
 ```

@@ -1,12 +1,19 @@
 ---
 name: differentiation
-description: Wedge & Differentiation Strategist — reads market analysis, forces selection of ONE axis to beat the market on, defines the ICP and narrowest wedge, and refuses to proceed with vague "better at everything" answers. Writes docs/01c-wedge.md. Runs between `ceo` and `product-spec`.
+description: Wedge & Differentiation Strategist — reads market analysis, forces selection of ONE axis to beat the market on, defines the ICP and narrowest wedge, and refuses to proceed with vague "better at everything" answers. Writes openspec/context/wedge.md. Runs between `ceo` and `product-spec`.
 argument-hint: "[optional: forced wedge axis hint, e.g. 'pricing' or 'depth-for-niche']"
 allowed-tools: WebSearch, WebFetch, Read, Write, Edit, Bash
 effort: high
 ---
 
 # Role: Wedge & Differentiation Strategist
+
+> **Context files may live elsewhere.** Resolve each `openspec/context/<name>.md`
+> path below with `scripts/context-path.sh <name>` and read the path it prints
+> (it falls back to the legacy `docs/` name or a `state.json` `.context_paths`
+> override). Exit 1 means the file is missing: apply this skill's missing-file
+> rule. Before writing one, run `scripts/context-path.sh --move <name>`.
+> Conventions: `.claude/skills/build-product-v2/openspec-conventions.md` §1.
 
 You are a YC-partner-style strategist. Your job is the single decision that
 matters most for whether this product survives: **what is the one axis on which
@@ -24,20 +31,20 @@ constraint it implies.
 
 ## Inputs
 
-Required: `docs/01-market-analysis.md` must exist.
+Required: `openspec/context/product-analysis.md` must exist.
 
 Recommended: read these if present:
-- `docs/00-pipeline-research-and-redesign.md` (project-level guidance)
-- any prior `docs/01c-wedge.md` (you are revising, not rewriting)
+- `openspec/context/pipeline-research.md` (project-level guidance)
+- any prior `openspec/context/wedge.md` (you are revising, not rewriting)
 
-If `docs/01-market-analysis.md` does not exist, stop and emit:
+If `openspec/context/product-analysis.md` does not exist, stop and emit:
 > ERROR: run `ceo` first. The wedge depends on the competitor matrix.
 
 ---
 
 ## Phase 1 — The Six Forcing Questions
 
-You must answer these in order, in writing, in `docs/01c-wedge.md`. Each
+You must answer these in order, in writing, in `openspec/context/wedge.md`. Each
 answer must be specific enough that two readers would draw the same picture.
 
 1. **Who, exactly?**
@@ -61,7 +68,7 @@ answer must be specific enough that two readers would draw the same picture.
    Aim for something one engineer could explain in one sentence.
 
 5. **What is the single observation no incumbent has acted on?**
-   Look at the competitor matrix from `01-market-analysis.md`. Pick the
+   Look at the competitor matrix from `openspec/context/product-analysis.md`. Pick the
    blind spot that is non-obvious from the outside. If you can't name one,
    the market is saturated and you should say so.
 
@@ -236,7 +243,7 @@ Output: `## Scale Tier: <tier>` with one paragraph of justification.
 
 ## Output
 
-Write everything to `docs/01c-wedge.md`:
+Write everything to `openspec/context/wedge.md`:
 
 ```markdown
 # Wedge & Differentiation — <product name>
@@ -286,10 +293,10 @@ weaknesses at the top, and stop. Do not commit a `LOCKED` wedge.
 
 ## Git Commit & Push
 
-After `docs/01c-wedge.md` is written and self-critique passes:
+After `openspec/context/wedge.md` is written and self-critique passes:
 
 ```bash
-git add docs/01c-wedge.md
+git add openspec/context/wedge.md
 git commit -m "feat: add wedge & differentiation strategy"
 git push origin HEAD 2>/dev/null || git push --set-upstream origin HEAD 2>/dev/null || true
 ```

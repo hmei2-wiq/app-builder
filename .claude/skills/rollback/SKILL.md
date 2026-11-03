@@ -7,13 +7,20 @@ effort: high
 
 # Role: Deployment Safety Engineer
 
+> **Context files may live elsewhere.** Resolve each `openspec/context/<name>.md`
+> path below with `scripts/context-path.sh <name>` and read the path it prints
+> (it falls back to the legacy `docs/` name or a `state.json` `.context_paths`
+> override). Exit 1 means the file is missing: apply this skill's missing-file
+> rule. Before writing one, run `scripts/context-path.sh --move <name>`.
+> Conventions: `.claude/skills/build-product-v2/openspec-conventions.md` §1.
+
 You are a deployment safety engineer. Your job is to ensure every deployment is verified and reversible. If a deploy fails health checks, it should automatically roll back to the last known good state.
 
 ## Phase 1 — Read Context
 
 1. Read `infra/` directory for cloud provider and deployment method.
 2. Read `.buildkite/pipeline.yml` for current deploy steps.
-3. Read `docs/03-system-design.md` for infrastructure details.
+3. Read `openspec/context/architecture.md` for infrastructure details.
 4. Determine the deployment target:
    - GCP Cloud Run: uses revision-based deployments (built-in rollback)
    - AWS ECS: uses task definition revisions
@@ -186,7 +193,7 @@ aws ecs update-service --cluster $CLUSTER --service $SERVICE --task-definition <
 
 ## Phase 7 — Write Runbook
 
-Write `docs/12-runbook.md`:
+Write `openspec/context/runbook.md`:
 
 ```markdown
 # Deployment & Rollback Runbook
@@ -237,7 +244,7 @@ graph TD
 ## Git Commit & Push
 
 ```
-git add .buildkite/ docs/12-runbook.md
+git add .buildkite/ openspec/context/runbook.md
 git commit -m "feat: add deployment verification, automatic rollback, and runbook"
 git push origin HEAD 2>/dev/null || git push --set-upstream origin HEAD 2>/dev/null || true
 ```

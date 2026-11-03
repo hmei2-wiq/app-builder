@@ -7,17 +7,24 @@ effort: max
 
 # Role: Senior E2E Test Engineer
 
+> **Context files may live elsewhere.** Resolve each `openspec/context/<name>.md`
+> path below with `scripts/context-path.sh <name>` and read the path it prints
+> (it falls back to the legacy `docs/` name or a `state.json` `.context_paths`
+> override). Exit 1 means the file is missing: apply this skill's missing-file
+> rule. Before writing one, run `scripts/context-path.sh --move <name>`.
+> Conventions: `.claude/skills/build-product-v2/openspec-conventions.md` §1.
+
 You are a senior QA engineer specializing in end-to-end testing. Your job is to create and run a comprehensive Playwright test suite that validates the product works as a real user experiences it.
 
 ## Phase 1 — Read Context
 
-Follow `.claude/skills/build-product-v2/openspec-conventions.md` (§6 test tagging). `OPENSPEC` is defined there (§2); the active change is `state/state.json` `.active_change` (`<change>`).
+Follow `.claude/skills/build-product-v2/openspec-conventions.md` (§7 test tagging). `OPENSPEC` is defined there (§2); the active change is `state/state.json` `.active_change` (`<change>`).
 
-1. Read `docs/00-tech-stack.md` for `testing.e2e` and `runtime.package_manager` (`<pm>` below — never assume npm).
+1. Read `openspec/context/tech-stack.md` for `testing.e2e` and `runtime.package_manager` (`<pm>` below — never assume npm).
 2. Primary source: the requirement scenarios — `$OPENSPEC list --specs --json`, then `$OPENSPEC show <cap> --type spec --json` for each capability in `openspec/specs/**`, and `$OPENSPEC show <change> --json --deltas-only` for the active change. Collect every `#### Scenario:` of every `Priority: M` and `S` requirement (ID, scenario name, WHEN/THEN).
-3. Read `docs/01b-product-spec.md` (if exists) for personas.
-4. Read `docs/03-system-design.md` for API endpoints and page routes.
-5. Read `docs/03b-ux-design.md` (if exists) for page flows and responsive breakpoints.
+3. Read `openspec/context/product.md` (if exists) for personas.
+4. Read `openspec/context/architecture.md` for API endpoints and page routes.
+5. Read `openspec/context/ux-design.md` (if exists) for page flows and responsive breakpoints.
 6. Read the `[e2e]` tasks in `openspec/changes/<change>/tasks.md`.
 7. Scan the codebase with `Glob` to understand the page/route structure.
 
@@ -127,40 +134,31 @@ LOOP:
 
 ## Phase 5 — Write Test Report
 
-Run `scripts/spec-coverage.sh` (it reads `reports/test-results/playwright.json` and writes `docs/11-traceability.md`). Any `Priority: M` requirement it reports uncovered goes back to Phase 3/4.
+Run `scripts/spec-coverage.sh` (it reads `reports/test-results/playwright.json` and writes `reports/traceability.md`). Any `Priority: M` requirement it reports uncovered goes back to Phase 3/4.
 
-Write `docs/08-e2e-test-report.md`:
+The per-requirement coverage matrix lives only in `reports/traceability.md`; the e2e report links to it and records what the matrix cannot. Resolve `$REPORTS` (conventions §1):
+
+```bash
+CHANGE=$(jq -r '.active_change // empty' state/state.json 2>/dev/null)
+REPORTS="${CHANGE:+openspec/changes/$CHANGE/reports}"; REPORTS="${REPORTS:-reports}"; mkdir -p "$REPORTS"
+```
+
+Write `$REPORTS/e2e.md`:
 
 ```markdown
-# E2E Test Report
+# E2E Test Report — <change>
 
 ## Summary
-- Total tests: X
-- Passed: X
-- Skipped: X (with reasons)
-- Failed: 0
-
-## Coverage by requirement
-Full matrix: [docs/11-traceability.md](11-traceability.md) (from `scripts/spec-coverage.sh`).
-
-| Requirement | Priority | Scenarios | Tests | Status |
-|-------------|----------|-----------|-------|--------|
-| FR-AUTH-01 | M | 2 | 2 | ✅ |
-| [ID] | M/S | X | X | ✅ |
-
-## User Flows Tested
-1. [Flow description] — ✅
-2. ...
+- Total tests: X · Passed: X · Skipped: X (S/C only, reasons below) · Failed: 0
+- Traceability: Must covered X/X — matrix in reports/traceability.md
 
 ## Bugs Found & Fixed
-| Bug | Severity | File | Fix |
-|-----|----------|------|-----|
-| ... | ... | ... | ... |
+| Bug | Severity | Requirements | File | Fix |
+|-----|----------|--------------|------|-----|
 
-## Gaps / Skipped Tests
+## Skipped Tests
 | Test | Priority (S/C only) | Reason |
-|------|-------------------------|--------|
-| ... | ... |
+|------|---------------------|--------|
 
 ## Responsive Testing
 | Viewport | Tests | Status |
@@ -172,7 +170,7 @@ Full matrix: [docs/11-traceability.md](11-traceability.md) (from `scripts/spec-c
 ## Git Commit & Push
 
 ```
-git add e2e/ playwright.config.ts docs/08-e2e-test-report.md docs/11-traceability.md package.json openspec/changes/<change>/tasks.md
+git add e2e/ playwright.config.ts package.json openspec/changes/
 git commit -m "feat: add Playwright E2E test suite with full coverage"
 git push origin HEAD 2>/dev/null || git push --set-upstream origin HEAD 2>/dev/null || true
 ```

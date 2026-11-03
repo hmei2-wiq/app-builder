@@ -1,12 +1,19 @@
 ---
 name: spec-ingest
-description: Spec Ingest — converts an existing requirements document (PRD, Confluence export, SRS) into an OpenSpec change (proposal, per-capability ADDED deltas with the source IDs kept, design.md open questions) plus docs/01b-product-spec.md and a lightweight docs/01c-wedge.md, so build-product-v2 can start at tech-stack-selector instead of market research. With --backfill, converts a legacy project's docs/02-system-requirements.md and docs/04-dev-plan.md instead.
+description: Spec Ingest — converts an existing requirements document (PRD, Confluence export, SRS) into an OpenSpec change (proposal, per-capability ADDED deltas with the source IDs kept, design.md open questions, ingest report under reports/) plus openspec/context/product.md and a lightweight openspec/context/wedge.md, so build-product-v2 can start at tech-stack-selector instead of market research. With --backfill, converts a legacy project's retired docs (02-system-requirements, 04-dev-plan, 01b-product-spec, 06-*, iteration-N) instead.
 argument-hint: "<path to requirements doc> | --backfill"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 effort: high
 ---
 
 # Role: Requirements Engineer (ingest)
+
+> **Context files may live elsewhere.** Resolve each `openspec/context/<name>.md`
+> path below with `scripts/context-path.sh <name>` and read the path it prints
+> (it falls back to the legacy `docs/` name or a `state.json` `.context_paths`
+> override). Exit 1 means the file is missing: apply this skill's missing-file
+> rule. Before writing one, run `scripts/context-path.sh --move <name>`.
+> Conventions: `.claude/skills/build-product-v2/openspec-conventions.md` §1.
 
 You turn a requirements document someone else wrote into the pipeline's
 spec-driven form, without losing or inventing anything. Fidelity beats
@@ -28,6 +35,14 @@ OPENSPEC="npx --yes @fission-ai/openspec@1.15.0"
 
 - `--backfill` mode: source = `docs/02-system-requirements.md` (+ `docs/01b-product-spec.md`
   stories, `docs/04-dev-plan.md` open tasks). Change name `import-legacy-specs`.
+  The other retired docs (conventions §1) are moved, not converted:
+  `docs/01b-product-spec.md` → vision, personas, KPIs, assumptions into
+  `openspec/context/product.md`, stories and scope into the proposal;
+  `docs/06-gap-analysis.md`, `docs/iteration-N/*`, `docs/dogfood/*`,
+  `docs/05`/`08`/`08b`/`09`/`10` reports → `openspec/changes/$CHANGE/reports/legacy/`;
+  `docs/06-iteration-log.md` → `reports/legacy/iteration-log.md`.
+  Delete each original after moving it (`git mv`). The durable docs in
+  conventions §1 "Moved" are `git mv`'d to `openspec/context/` unchanged.
 - Otherwise: source = the path given. Change name `import-<slug>` (slug from the document title).
 - If the source is missing or not readable, stop: `ERROR: spec-ingest needs a readable requirements document`.
 
@@ -139,19 +154,22 @@ Leave `tasks.md` to the `designer`; write it with a single heading
 
 ## Phase 5 — Product context for the rest of the pipeline
 
-The downstream skills read `01b` and `01c`. Write them from the source
-only. Don't run market research and don't invent personas.
+The downstream skills read `product` and `wedge`. Write them from the source
+only. Don't run market research and don't invent personas. Nothing
+already in the change (requirements, scope, open questions) is
+repeated here.
 
-**`docs/01b-product-spec.md`**:
+**`openspec/context/product.md`**:
 1. Vision — the source's purpose paragraph.
 2. Users and roles — the source's roles and permission matrix (these replace personas; add no fictional detail).
-3. Story map — one line per capability: the requirements in it, by priority.
-4. MVP scope — in scope, out of scope, MVP definition and dates.
-5. Success metrics — only what the source states. If none, write `[NEEDS CLARIFICATION: OQ-NN]` and add the OQ.
-6. Assumptions and risks — the source's assumptions section.
-7. Open questions — pointer to `design.md`.
+3. Success metrics — only what the source states. If none, write `[NEEDS CLARIFICATION: OQ-NN]` and add the OQ to `design.md`.
+4. Assumptions and risks — the source's assumptions section.
 
-**`docs/01c-wedge.md`** (light version; mark it `Status: DRAFT — from spec-ingest`):
+MVP scope (in / out, dates) goes into the proposal: in-scope as the
+What Changes capability list, out-of-scope under Non-goals, dates
+under Impact.
+
+**`openspec/context/wedge.md`** (light version; mark it `Status: DRAFT — from spec-ingest`):
 - Wedge sentence: the source's primary goal in ≤ 140 characters.
 - ICP: the primary user role.
 - Workflow: the source's main workflow steps (≤ 10).
@@ -164,7 +182,7 @@ only. Don't run market research and don't invent personas.
 
 ## Phase 6 — Fidelity report
 
-Write `openspec/changes/$CHANGE/ingest-report.md` (OpenSpec ignores extra files):
+Write `openspec/changes/$CHANGE/reports/ingest.md` (OpenSpec ignores the `reports/` folder and archives it with the change):
 
 ```markdown
 # Ingest report — <source>
@@ -199,7 +217,7 @@ any "Not converted" rows.
 ## Git Commit & Push
 
 ```bash
-git add openspec/ docs/01b-product-spec.md docs/01c-wedge.md
+git add openspec/ openspec/context/product.md openspec/context/wedge.md
 git commit -m "feat: ingest <source> as OpenSpec change $CHANGE"
 git push origin HEAD 2>/dev/null || git push --set-upstream origin HEAD 2>/dev/null || true
 ```

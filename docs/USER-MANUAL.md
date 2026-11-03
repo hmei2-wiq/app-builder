@@ -50,7 +50,7 @@ mechanical.
 
 ### 1. The wedge is law
 
-`differentiation` produces `docs/01c-wedge.md`. It contains the wedge
+`differentiation` produces `openspec/context/wedge.md`. It contains the wedge
 sentence (≤ 140 chars), the chosen axis, the anti-axis, and the
 **stack constraints** (`realtime`, `ai_heavy`, `regulated`,
 `multi_tenant_b2b`, `eu_global_billing`, `mobile_first`, `data_heavy`).
@@ -58,7 +58,7 @@ Every later phase reads this and refuses out-of-wedge work.
 
 ### 2. The tech-stack contract is law
 
-`tech-stack-selector` produces `docs/00-tech-stack.md`. It pins
+`tech-stack-selector` produces `openspec/context/tech-stack.md`. It pins
 versions, picks vendors, declares `not_in_stack`. Every implementation
 skill reads it as the binding contract — they will not silently
 substitute Drizzle for Prisma, or SendGrid for Resend, or anything in
@@ -140,16 +140,16 @@ CLI tools needed:
 ```
 
 The orchestrator initializes `state/state.json` via
-`scripts/state-init.sh` and creates `docs/`. From here it will spawn
+`scripts/state-init.sh` and creates `openspec/context/`. From here it will spawn
 fresh sub-agents per phase. You sit back until a checkpoint.
 
 ### A.2 Phases 1–2 — Strategy (≈ 10–20 min)
 
 The orchestrator runs:
 
-- **`ceo`** → `docs/01-market-analysis.md` (TAM/SAM/SOM, ≥ 5 competitors, wedge candidates)
+- **`ceo`** → `openspec/context/product-analysis.md` (TAM/SAM/SOM, ≥ 5 competitors, wedge candidates)
 - **`ceo_critic`** (different model) — gates on platitude-free, sourced, non-trivial competitor matrix
-- **`differentiation`** → `docs/01c-wedge.md` with the six forcing questions, single axis, kill switches, and **stack constraints**
+- **`differentiation`** → `openspec/context/wedge.md` with the six forcing questions, single axis, kill switches, and **stack constraints**
 - **`diff_critic`** — gates on single-axis, < 140 char wedge, "could a competitor copy in a weekend?" test
 
 ### A.3 Human checkpoint 1 — wedge + tier + constraints
@@ -169,7 +169,7 @@ revise, the orchestrator loops back to `differentiation`.
 ### A.4 Phase 2.7 — Tech stack contract (NEW)
 
 After confirmation, **`tech-stack-selector`** writes
-`docs/00-tech-stack.md`:
+`openspec/context/tech-stack.md`:
 
 - Pinned 2026-Q2 versions (Node 22, Next 15, Postgres 16, Redis 7, …)
 - Vendors picked per scale tier and constraints (e.g. `ai_heavy=true` flips on `pgvector` + `ai.cost_tracking: required`)
@@ -178,16 +178,16 @@ After confirmation, **`tech-stack-selector`** writes
 
 The `stack_critic` then checks pins, rationale, and constraint
 coverage. If you see a vendor you don't want, **stop here** and either
-edit `docs/00-tech-stack.md` directly or rerun `tech-stack-selector`
+edit `openspec/context/tech-stack.md` directly or rerun `tech-stack-selector`
 with a different argument hint.
 
 ### A.5 Phases 3–6 — Specs and design (≈ 30–60 min)
 
-- **`product-spec`** → `docs/01b-product-spec.md` (PRD, one critical flow + ≤ 3 supporting, KPIs)
-- **`analyst`** → `docs/02-system-requirements.md` (FRs/NFRs, IEEE 830, every FR tagged wedge-critical / wedge-supporting / out-of-wedge)
-- **`designer`** → `docs/03-system-design.md` (architecture mapped onto the contract — does NOT re-pick vendors)
+- **`product-spec`** → `openspec/context/product.md` (vision, personas, KPIs) + `openspec/changes/mvp/proposal.md` (story map: one critical flow + ≤ 3 supporting, non-goals, capabilities)
+- **`analyst`** → `openspec/changes/mvp/specs/<capability>/spec.md` (FRs/NFRs as OpenSpec deltas with IDs, priority, wedge tag and scenarios; `openspec validate --strict`)
+- **`designer`** → `openspec/context/architecture.md` (current architecture mapped onto the contract — does NOT re-pick vendors) + the change's `design.md` (decisions, stack gaps, open questions) and `tasks.md`
 - **`design_critic`** — enforces tier-appropriate architecture (no microservices on `preview`)
-- **`ux-designer`** → `docs/03b-ux-design.md` (design system, wireframes, theme config matching `contract.frontend.css`)
+- **`ux-designer`** → `openspec/context/ux-design.md` (design system, wireframes, theme config matching `contract.frontend.css`)
 
 ### A.6 Human checkpoint 2 — visual target
 
@@ -198,8 +198,9 @@ Surfaced: competitor teardown screenshots + design rubric scores. Confirm or rev
 - **`auth-engineer`** → scaffolds the auth provider named in `contract.auth.default` (Lucia / Clerk / Supabase Auth / Auth0). Replaces hand-rolled JWT.
 - **`ai-features`** (only if `ai_heavy: true`) → RAG pipeline, embeddings table, prompt versioning under `src/prompts/`, eval harness in `evals/`, token cost ledger
 
-Both write into `docs/04-dev-plan.md` so the parallel implementers
-can wire against the established infrastructure.
+Both tick their tasks in the change's `tasks.md` and record decisions in
+`design.md`, so the parallel implementers can wire against the
+established infrastructure.
 
 ### A.8 Phase 7 — Implementation fan-out (parallel, ≈ 1–4 hours)
 
@@ -209,7 +210,7 @@ Three subagents run **in parallel** in a single message:
 - **`frontend-developer`** → component library, pages, state, forms, accessibility
 - **`db-migrator`** → migrations + seed data
 
-All three read `docs/00-tech-stack.md` first and refuse vendors not in
+All three read `openspec/context/tech-stack.md` first and refuse vendors not in
 the contract.
 
 ### A.9 Phase 8 — Quality gates
@@ -240,8 +241,8 @@ gate, the orchestrator stops and surfaces to you.
 
 ### A.11 Phases 12–13 — Pricing, positioning, landing page
 
-- **`pricing`** → `docs/16-pricing.md` (2–3 tiers, Stripe/Paddle per contract)
-- **`positioning`** → `docs/17-positioning.md` (one-line value prop, hero copy)
+- **`pricing`** → `openspec/context/pricing.md` (2–3 tiers, Stripe/Paddle per contract)
+- **`positioning`** → `openspec/context/positioning.md` (one-line value prop, hero copy)
 - **Human checkpoint 3** — confirm tiers + headline
 - **`landing-page`** → public marketing page
 
@@ -302,23 +303,24 @@ verifies tests.
 /iterate "competitor X just launched feature Y"   # focused
 ```
 
-What it does (`docs/iterate/SKILL.md`):
+What it does (`.claude/skills/iterate/SKILL.md`):
 
-1. **Phase 1** — re-reads `docs/01-market-analysis.md`, web-searches
+1. **Phase 1** — re-reads `openspec/context/product-analysis.md`, web-searches
    for new competitors / pricing / regulatory changes / user feedback
    patterns. Appends an **Iteration N Update** section.
 2. **Phase 2** — gap analysis: every FR/NFR mapped to
    Implemented / Partial / Missing / Divergent. Writes
-   `docs/06-gap-analysis.md`.
-3. **Phase 3** — appends new tagged-`[Iteration N]` requirements to
-   `02-system-requirements.md` and tasks to `04-dev-plan.md`. Does
-   **not** modify previously-completed work.
-4. **Phase 4** — implements each new task, tests-driven, until green.
+   `openspec/changes/iter-<N>-<slug>/reports/gap-analysis.md`.
+3. **Phase 3** — writes the change: proposal, ADDED / MODIFIED /
+   REMOVED deltas, design (if architecture changes) and tasks;
+   `openspec validate --strict`.
+4. **Phase 4** — implements each task, tests-driven, until green.
 5. **Phase 5** — full verification: unit + integration + smoke + E2E
-   + security re-check + perf spot-check.
-6. **Phase 6** — appends to `docs/06-iteration-log.md`.
+   + security re-check + perf spot-check + traceability; writes
+   `reports/verification.md`, then archives the change. The archived
+   change in `openspec/changes/archive/` is the iteration's record.
 
-`/iterate` does not touch `docs/00-tech-stack.md` or `docs/01c-wedge.md`.
+`/iterate` does not touch `openspec/context/tech-stack.md` or `openspec/context/wedge.md`.
 The wedge and stack stay frozen.
 
 ### B.2 Mode 2 — The wedge itself needs revising
@@ -336,9 +338,9 @@ trigger `/tech-stack-selector` if the stack constraints changed.)
 
 This re-runs:
 
-1. `differentiation` — produces a new `docs/01c-wedge.md`.
+1. `differentiation` — produces a new `openspec/context/wedge.md`.
 2. **Human checkpoint 1** — confirm the new wedge. **Mandatory.**
-3. `tech-stack-selector` — refreshes `docs/00-tech-stack.md`. If the
+3. `tech-stack-selector` — refreshes `openspec/context/tech-stack.md`. If the
    constraints changed (e.g. `ai_heavy` flipped on), the contract
    gains pgvector, AI cost tracking, etc.
 4. The `iterate` skill picks up from there to land the implementation
@@ -395,18 +397,19 @@ It then forces a single answer to:
 > the most-leaking step of the wedge funnel by ≥ 5 percentage points?
 
 **Not five changes. One.** It also re-checks kill switches from
-`01c-wedge.md`. If a switch is tripped (e.g. trial-to-paid below the
+`openspec/context/wedge.md`. If a switch is tripped (e.g. trial-to-paid below the
 threshold for 30 days) it stops the loop and recommends pivot / narrow
 / shutdown.
 
-If `signal-iterate` exits with `Status: PROPOSED`, the change is
-described in `docs/iteration-N/the-one-change.md` with predicted lift,
-success metric (queryable in PostHog), and kill criterion. The
+If `signal-iterate` stops before implementing, the change is
+described in `openspec/changes/iter-<N>-signal-<slug>/proposal.md`
+with predicted lift, success metric (queryable in PostHog), and kill
+criterion; the signals are in that change's `reports/`. The
 implementer (`backend-developer` or `frontend-developer`) is spawned
 sequentially.
 
-The "Measured lift" field is filled in by **iteration N+1** — that's
-the self-correcting loop.
+The measured lift is recorded by **iteration N+1** (in its own
+`reports/signals-behavior.md`) — that's the self-correcting loop.
 
 ### C.2 The idea came from you (founder / PM / engineer)
 
@@ -419,7 +422,7 @@ You skip the signal pull. Two options:
 /frontend-developer "add the export button + download progress modal"
 ```
 
-Each implementer reads `docs/00-tech-stack.md` first, then implements
+Each implementer reads `openspec/context/tech-stack.md` first, then implements
 the feature with tests, and commits. Use `/dogfood` after to verify in
 a browser.
 
@@ -433,8 +436,8 @@ Use `/iterate` with a focus area:
 
 The skill will:
 1. Web-search for similar features in competitors (briefly)
-2. Append the new requirements to `02-system-requirements.md` tagged `[Iteration N]`
-3. Update `04-dev-plan.md` with implementation tasks
+2. Open an `iter-N-<slug>` change with requirement deltas
+3. Write the change's `tasks.md`
 4. Implement + test until green
 
 This is heavier than C.2.a and lighter than B.1 (no full market re-scan).
@@ -511,13 +514,13 @@ You drive the sequence yourself:
 
 ```
 /ceo "<idea>"
-# read docs/01-market-analysis.md, edit if needed
+# read openspec/context/product-analysis.md, edit if needed
 /differentiation "speed"
-# inspect docs/01c-wedge.md
+# inspect openspec/context/wedge.md
 /tech-stack-selector
 /product-spec
 /analyst
-# stop here, build by hand from docs/02-system-requirements.md
+# stop here, build by hand from openspec/changes/mvp/
 ```
 
 Use when you want full control of the strategic phases but plan to
@@ -590,7 +593,7 @@ orchestrator.
 
 ### D.4 The four anti-patterns (don't do these)
 
-1. **Don't edit `docs/00-tech-stack.md` ad-hoc** without rerunning
+1. **Don't edit `openspec/context/tech-stack.md` ad-hoc** without rerunning
    `tech-stack-selector`. Downstream skills treat it as the contract;
    silent edits cause drift.
 3. **Don't skip dogfood.** The skill exists because UI tests don't catch
@@ -633,40 +636,40 @@ Orchestration    → build-product-v2 (canonical)
 
 | Skill | Reads | Writes | Owner of |
 |---|---|---|---|
-| `ceo` | idea | `01-market-analysis.md` | TAM/SAM/SOM, competitors, wedge candidates |
-| `differentiation` | `01` | `01c-wedge.md` (wedge + stack constraints) | Wedge axis, ICP, scale tier |
-| `tech-stack-selector` | `01c` | **`00-tech-stack.md`** | The binding stack contract |
-| `product-spec` | `00, 01, 01c` | `01b-product-spec.md` | PRD, KPIs |
-| `analyst` | `00, 01, 01b, 01c` | `02-system-requirements.md` | FRs, NFRs (IEEE 830) |
-| `designer` | `00, 01b, 01c, 02` | `03-system-design.md` | Architecture mapped onto contract |
-| `ux-designer` | `00, 01b, 01c, 03` | `03b-ux-design.md` | Design system, wireframes |
-| `auth-engineer` | `00, 01c, 02, 03` | auth code | Lucia/Clerk/Supabase Auth/Auth0 |
-| `ai-features` | `00, 01c, 02, 03` | `src/lib/ai/`, `src/prompts/`, `evals/` | RAG, prompts, eval, cost tracking |
-| `backend-developer` | `00, 01c, 02, 03` | code, `04-dev-plan.md` | API routes, services, integrations |
-| `frontend-developer` | `00, 01c, 03, 03b` | code | Pages, components, state |
-| `db-migrator` | `00, 03` | migrations, seed | Schema evolution |
-| `api-docs` | code, `02, 03` | `07-api-reference.md`, OpenAPI | API documentation |
-| `email-templates` | `00, 02, 03, 03b` | email service | Transactional emails |
-| `background-jobs` | `00, 02, 03` | job queue setup | Async processing |
-| `analytics` | `00, 01b, 01c, 02` | analytics SDK | Event tracking |
-| `observability` | `00, 02, 03` | logging, health checks, dashboards | SRE tooling |
-| `e2e-tester` | code, `02` | `e2e/`, Playwright config | E2E test suite |
-| `perf-tester` | code | `10-performance-report.md`, k6 | Load tests, bundle analysis |
-| `adversarial-tester` | code, `02, 03` | `tests/adversarial/`, `08b` | Property/fuzz/boundary tests |
-| `security-auditor` | code, `00, 03` | `09-security-audit.md` | OWASP, CVEs, secrets scan |
-| `dogfood` | running app, `01c, 03b` | `dogfood/`, `dogfood/iter-N.md` | Real-browser wedge walk |
-| `legal-compliance` | code, `02, 03` | legal pages, consent banner | GDPR, ToS, privacy |
-| `pricing` | `01, 01b, 01c` | `16-pricing.md` | 2–3 tiers, trial mechanics |
-| `positioning` | `01c, 01b, 16` | `17-positioning.md` | Hero copy, value prop |
-| `landing-page` | `00, 01c, 03b, 16, 17` | landing page | Public marketing |
-| `cicd` | `00, 03, 04` | `.buildkite/` (or alt), Dockerfile | CI/CD pipeline |
-| `env-manager` | `00, 03` | `.env`, secrets references | Env separation |
-| `deployer` | `00, 03, state` | `infra/` or `vercel.json`/`fly.toml` | Tier-aware deploy |
-| `rollback` | deploy state | rollback runbook | Deploy safety |
-| `production-readiness` | all | `18-production-readiness.md` | PRR checklist |
-| `iterate` | all docs, code | `06-iteration-log.md`, `06-gap-analysis.md` | Market-driven iteration |
-| `signal-iterate` | analytics, `01c` | `iteration-N/...` | Signal-driven iteration |
-| `reviewer` | code | `05-code-review.md` | Code review (full repo) |
+| `ceo` | idea | `openspec/context/product-analysis.md` | TAM/SAM/SOM, competitors, wedge candidates |
+| `differentiation` | `product-analysis` | `openspec/context/wedge.md` (wedge + stack constraints) | Wedge axis, ICP, scale tier |
+| `tech-stack-selector` | `wedge` | **`openspec/context/tech-stack.md`** | The binding stack contract |
+| `product-spec` | `tech-stack`, `product-analysis`, `wedge` | `openspec/context/product.md`, Δ `proposal.md` | Personas, KPIs, story map |
+| `analyst` | `tech-stack`, `product-analysis`, `product`, `wedge`, Δ proposal | Δ `specs/**` | FRs, NFRs as OpenSpec deltas |
+| `designer` | `tech-stack`, `product`, `wedge`, specs, Δ | `openspec/context/architecture.md`, Δ `design.md`, Δ `tasks.md` | Architecture mapped onto contract |
+| `ux-designer` | `tech-stack`, `product`, `wedge`, `architecture` | `openspec/context/ux-design.md` | Design system, wireframes |
+| `auth-engineer` | `tech-stack`, `wedge`, `architecture`, specs | auth code | Lucia/Clerk/Supabase Auth/Auth0 |
+| `ai-features` | `tech-stack`, `wedge`, `architecture`, specs | `src/lib/ai/`, `src/prompts/`, `evals/` | RAG, prompts, eval, cost tracking |
+| `backend-developer` | `tech-stack`, `wedge`, `architecture`, specs, Δ | code, ticks `[backend]` tasks | API routes, services, integrations |
+| `frontend-developer` | `tech-stack`, `wedge`, `architecture`, `ux-design` | code | Pages, components, state |
+| `db-migrator` | `tech-stack`, `architecture` | migrations, seed | Schema evolution |
+| `api-docs` | code, `architecture`, specs | `openapi.yaml` | API documentation (single reference) |
+| `email-templates` | `tech-stack`, `architecture`, `ux-design`, specs | email service | Transactional emails |
+| `background-jobs` | `tech-stack`, `architecture`, specs | job queue setup | Async processing |
+| `analytics` | `tech-stack`, `product`, `wedge`, specs | analytics SDK | Event tracking |
+| `observability` | `tech-stack`, `architecture`, specs | logging, health checks, dashboards, `openspec/context/observability.md` | SRE tooling |
+| `e2e-tester` | code, specs | `e2e/`, Playwright config | E2E test suite |
+| `perf-tester` | code | Δ `reports/performance.md`, k6 | Load tests, bundle analysis |
+| `adversarial-tester` | code, `architecture`, specs | `tests/adversarial/`, Δ `reports/adversarial.md` | Property/fuzz/boundary tests |
+| `security-auditor` | code, `tech-stack`, `architecture` | Δ `reports/security-audit.md` | OWASP, CVEs, secrets scan |
+| `dogfood` | running app, `wedge`, `ux-design` | `dogfood/*.png`, Δ `reports/dogfood-<run>.md` | Real-browser wedge walk |
+| `legal-compliance` | code, `architecture`, specs | legal pages, consent banner, `openspec/context/data-retention.md` | GDPR, ToS, privacy |
+| `pricing` | `product-analysis`, `product`, `wedge` | `openspec/context/pricing.md` | 2–3 tiers, trial mechanics |
+| `positioning` | `wedge`, `product`, `pricing` | `openspec/context/positioning.md` | Hero copy, value prop |
+| `landing-page` | `tech-stack`, `wedge`, `ux-design`, `pricing`, `positioning` | landing page | Public marketing |
+| `cicd` | `tech-stack`, `architecture`, Δ `tasks.md` | `.buildkite/` (or alt), Dockerfile | CI/CD pipeline |
+| `env-manager` | `tech-stack`, `architecture` | `.env.example`, `openspec/context/environments.md` | Env separation |
+| `deployer` | `tech-stack`, `architecture`, state | `infra/` or `vercel.json`/`fly.toml` | Tier-aware deploy |
+| `rollback` | deploy state | `openspec/context/runbook.md` | Deploy safety |
+| `production-readiness` | all | Δ `reports/production-readiness.md` | PRR checklist |
+| `iterate` | all docs, code | its own change Δ (+ `reports/gap-analysis.md`) | Market-driven iteration |
+| `signal-iterate` | analytics, `wedge` | its own change Δ (+ `reports/signals-*.md`) | Signal-driven iteration |
+| `reviewer` | code | Δ `reports/code-review.md` | Code review (full repo) |
 | `build-product-v2` | idea | state machine + all of above | The canonical orchestrator |
 
 ### gstack skills (cross-cutting)
@@ -704,27 +707,44 @@ Orchestration    → build-product-v2 (canonical)
 
 What gets written where during a full build:
 
+One fact, one home (`.claude/skills/build-product-v2/openspec-conventions.md` §1):
+
+Context files don't have to be under `openspec/context/`: skills resolve
+each one with `scripts/context-path.sh <name>`, which also finds the old
+`docs/NN-*.md` names or a path you set in `state/state.json`
+`.context_paths.<name>`.
+
 ```
 docs/
-  00-tech-stack.md            ← tech-stack-selector  (THE CONTRACT)
-  01-market-analysis.md       ← ceo
-  01b-product-spec.md         ← product-spec
-  01c-wedge.md                ← differentiation      (WEDGE + STACK CONSTRAINTS)
-  02-system-requirements.md   ← analyst
-  03-system-design.md         ← designer
-  03b-ux-design.md            ← ux-designer
-  04-dev-plan.md              ← backend/frontend/auth/ai-features (live)
-  05-code-review.md           ← reviewer
-  06-iteration-log.md         ← iterate / signal-iterate
-  06-gap-analysis.md          ← iterate
-  07-api-reference.md         ← api-docs
-  08b-adversarial-report.md   ← adversarial-tester
-  09-security-audit.md        ← security-auditor
-  10-performance-report.md    ← perf-tester
-  16-pricing.md               ← pricing
-  17-positioning.md           ← positioning
-  18-production-readiness.md  ← production-readiness
-  iteration-N/                ← signal-iterate (per-iteration folder)
+  RUN.md                      ← orchestrator (local quickstart for humans)
+
+openspec/
+  config.yaml                 ← orchestrator Phase 0 (context + rules)
+  context/                    ← durable, non-behaviour context only
+    tech-stack.md             ← tech-stack-selector  (THE CONTRACT)
+    product-analysis.md       ← ceo (iterate appends updates)
+    product.md                ← product-spec         (vision, personas, KPIs)
+    wedge.md                  ← differentiation      (WEDGE + STACK CONSTRAINTS)
+    architecture.md           ← designer             (current architecture)
+    ux-design.md              ← ux-designer
+    pricing.md                ← pricing
+    positioning.md            ← positioning
+    observability.md, runbook.md, data-retention.md,
+    environments.md           ← ops skills (launch+)
+  specs/<capability>/spec.md  ← current behaviour; written only by `openspec archive`
+  changes/<change>/           ← one per build / iteration (mvp, import-*, iter-*)
+    proposal.md               ← why, stories, non-goals, capabilities, success metric
+    specs/<capability>/spec.md← requirement deltas (analyst)
+    design.md                 ← decisions, risks, stack gaps, open questions
+    tasks.md                  ← owner-tagged checklist
+    reports/                  ← evidence: ingest, gap-analysis, signals-*, e2e,
+                                adversarial, security-audit, dogfood-<run>,
+                                performance, code-review, production-readiness,
+                                traceability snapshot
+  changes/archive/<date>-<change>/  ← history (replaces the iteration log)
+
+reports/traceability.md       ← scripts/spec-coverage.sh (generated)
+openapi.yaml                  ← api-docs (single API reference)
 
 state/
   state.json                  ← scripts/state-init.sh (orchestrator state)
@@ -740,7 +760,7 @@ infra/                        ← deployer (launch+ tier)
 .github/workflows/            ← cicd (alternative if contract.ci.provider=github-actions)
 Dockerfile                    ← cicd
 vercel.json or fly.toml       ← deployer (preview tier)
-dogfood/                      ← dogfood
+dogfood/                      ← dogfood (screenshots)
 ```
 
 ---
@@ -749,28 +769,28 @@ dogfood/                      ← dogfood
 
 ### "ERROR: run `tech-stack-selector` first"
 
-A skill exited because `docs/00-tech-stack.md` doesn't exist. Run:
+A skill exited because `openspec/context/tech-stack.md` doesn't exist. Run:
 
 ```
 /tech-stack-selector
 ```
 
-You need a `docs/01c-wedge.md` first, which means `differentiation`
+You need a `openspec/context/wedge.md` first, which means `differentiation`
 must have run.
 
 ### A vendor I don't want shows up in the contract
 
 Either:
-1. Edit `docs/00-tech-stack.md` directly (acceptable for one-off tweaks), OR
+1. Edit `openspec/context/tech-stack.md` directly (acceptable for one-off tweaks), OR
 2. Rerun `/tech-stack-selector` with an argument hint forcing the constraint that biases away from it.
 
 After editing, downstream skills will respect the new contract.
 
 ### A skill substituted a different vendor than the contract names
 
-This is a bug. Skills are required to read `docs/00-tech-stack.md` first
-and refuse silent substitution. Open `docs/04-dev-plan.md`, search for
-`STACK_GAP:` — that's how skills are supposed to surface gaps. If the
+This is a bug. Skills are required to read `openspec/context/tech-stack.md` first
+and refuse silent substitution. Open the change's `design.md`, search for
+`## Stack Gaps` — that's how skills are supposed to surface gaps. If the
 skill substituted without surfacing, file an issue.
 
 ### Quality gates loop forever
@@ -787,7 +807,7 @@ Then fix manually or invoke the failing gate's owner skill directly.
 ### Cloud provider was auto-detected wrong
 
 `tech-stack-selector` and `deployer` use `gcloud` / `aws` CLI presence
-to bias the choice. Override by editing `docs/00-tech-stack.md`'s
+to bias the choice. Override by editing `openspec/context/tech-stack.md`'s
 `cloud.provider` and re-running `/deployer`.
 
 ### CI is too expensive
@@ -818,7 +838,7 @@ evidence-driven.
 ### A kill switch tripped
 
 `signal-iterate` Phase 5 stops the loop when a kill switch from
-`docs/01c-wedge.md` trips. Read `docs/iteration-N/kill-switch-tripped.md`.
+`openspec/context/wedge.md` trips. Read the proposal of `openspec/changes/iter-<N>-signal-kill-switch/` (a no-behaviour change that records the decision).
 The recommendation will be one of: pivot (rerun `/differentiation`
 with a new axis), narrow (re-scope ICP further), or shut down. This
 is the only skill allowed to recommend shutdown.
@@ -827,7 +847,7 @@ is the only skill allowed to recommend shutdown.
 
 ## Appendix — Stack contract quick reference
 
-The contract at `docs/00-tech-stack.md` is the single source of truth.
+The contract at `openspec/context/tech-stack.md` is the single source of truth.
 Default 2026-Q2 for `preview` tier:
 
 ```yaml
@@ -863,7 +883,7 @@ security:   argon2id passwords (bcrypt retired)
 ```
 
 To change anything: rerun `/tech-stack-selector` or edit
-`docs/00-tech-stack.md` directly. Quarterly review default: 90 days
+`openspec/context/tech-stack.md` directly. Quarterly review default: 90 days
 from contract date.
 
 ---

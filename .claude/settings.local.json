@@ -31,7 +31,7 @@
       "Skill(update-config)",
       "Bash(gh api *)",
       "Bash(git check-ignore *)",
-      "Bash(grep -nE '^#{1,3} ' docs/input.md)",
+      "Bash(grep -nE '^#{1,3} ' openspec/context/sources/ends-tool-requirements.md)",
       "Bash(grep -nE '^#{1,3} ' docs/orchestrator-workflow.md docs/USER-MANUAL.md)"
     ],
     "defaultMode": "bypassPermissions"

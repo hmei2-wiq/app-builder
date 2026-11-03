@@ -31,7 +31,7 @@ ceo → differentiation → [HUMAN] → tech-stack-selector → product-spec
 **Stack contract:** `differentiation` emits stack constraints
 (realtime, ai_heavy, regulated, multi_tenant_b2b, eu_global_billing,
 mobile_first, data_heavy). `tech-stack-selector` runs after the first
-human checkpoint and writes `docs/00-tech-stack.md` — the binding
+human checkpoint and writes `openspec/context/tech-stack.md` — the binding
 contract every downstream skill reads. CI/CD defaults to **Buildkite**
 (cost-effective; org has `$BK_API_TOKEN`); GitHub Actions / GitLab CI
 are alternatives, opted into via the contract.
@@ -41,8 +41,13 @@ are alternatives, opted into via the contract.
 change in `openspec/changes/<name>/` (proposal → delta specs → design →
 tasks), validated `--strict` before code, implemented task by task,
 proven by `@<ID>`-tagged tests (`traceability` gate), and archived at
-ship. `docs/02-system-requirements.md` and `docs/04-dev-plan.md` are
-retired. Rules: `.claude/skills/build-product-v2/openspec-conventions.md`.
+ship. One fact, one home: behaviour in `openspec/specs/`, everything
+made for one change (stories, decisions, tasks, evidence reports) in
+`openspec/changes/<name>/` (`reports/` for evidence), and
+`openspec/context/` only for durable non-behaviour context (stack, wedge, market, personas,
+architecture, UX, pricing, ops). The archive replaces the iteration
+log. Rules and the retired-docs list:
+`.claude/skills/build-product-v2/openspec-conventions.md` §1.
 
 Each `→` between two strategic artifacts has a critic gate (different
 model from the producer). The four boxes marked HUMAN in
@@ -70,12 +75,16 @@ Live in `scripts/`. The orchestrator and skills assume they exist.
 - `state-decide.sh <phase> "<decision>" "<reason>"` — append ADR
 - `quality-gates.sh [--only x,y] [--skip z] [--keep-going]` — layered hard gates
   (starts with `spec-validate`; `traceability` runs after `e2e`)
+- `context-path.sh [--move] <name>…` — resolve a context file
+  (`openspec/context/<name>.md`, falling back to legacy `docs/` names or
+  a `state.json` `.context_paths` override); `--move` relocates a legacy
+  file before writing
 - `spec-coverage.sh [--json] [--no-write]` — requirement ↔ test traceability;
-  writes `docs/11-traceability.md`
+  writes `reports/traceability.md`
 - `route-failure.sh --gate <g> --area <path>` — map failure → owner skill
 - `shipworthy-scan.sh <url> [--json]` — passive security audit of a deployed
   app (leaked secrets, Supabase RLS-off, open APIs, headers, source maps); the
-  free "Is your app Shipworthy?" top-of-funnel scanner (see `docs/01e-…`)
+  free "Is your app Shipworthy?" top-of-funnel scanner (see `openspec/context/shipworthy-strategy.md`)
 - `cogs-model.sh [--sweep]` — PLG free→paid unit-economics model; the Phase 2
   go/no-go gate for the self-serve tier
 
@@ -84,7 +93,7 @@ OpenSpec CLI via `npx`). Tests live in `scripts/test/*.test.sh`.
 
 ## Skills inventory
 
-See `docs/00-pipeline-research-and-redesign.md` for the full list,
+See `openspec/context/pipeline-research.md` for the full list,
 the design rationale, and the open backlog.
 
 New (round 1 + round 2): `differentiation`, `pricing`, `positioning`,

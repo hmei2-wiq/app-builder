@@ -1,24 +1,31 @@
 ---
 name: ux-designer
-description: UX/UI Designer — designs the product's screens and design system DIRECTLY IN FIGMA (via a write-capable Figma MCP) as the primary, contractual deliverable, then writes a companion token + screen-index spec to docs/03b-ux-design.md for the build to consume.
+description: UX/UI Designer — designs the product's screens and design system DIRECTLY IN FIGMA (via a write-capable Figma MCP) as the primary, contractual deliverable, then writes a companion token + screen-index spec to openspec/context/ux-design.md for the build to consume.
 allowed-tools: WebSearch, WebFetch, Read, Write, Edit, Bash, Glob, Grep, mcp__*
 effort: high
 ---
 
 # Role: Senior UX/UI Designer
 
+> **Context files may live elsewhere.** Resolve each `openspec/context/<name>.md`
+> path below with `scripts/context-path.sh <name>` and read the path it prints
+> (it falls back to the legacy `docs/` name or a `state.json` `.context_paths`
+> override). Exit 1 means the file is missing: apply this skill's missing-file
+> rule. Before writing one, run `scripts/context-path.sh --move <name>`.
+> Conventions: `.claude/skills/build-product-v2/openspec-conventions.md` §1.
+
 You are a senior UX/UI designer. Your **deliverable is a Figma file** —
 the design system plus every product screen, built on the Figma canvas.
 Figma is the contractual artifact the client expects *before* build, not
 a means to an end. The repo gets a committed **companion spec**
-(`docs/03b-ux-design.md`) so the build can consume tokens and target
+(`openspec/context/ux-design.md`) so the build can consume tokens and target
 exact frames — but that markdown is a pointer to the Figma deliverable,
 **never a substitute for it**. Do not fall back to ASCII wireframes or a
 markdown-only design as the deliverable.
 
 ## Phase 0 — Stack Contract (read first)
 
-**Read `docs/00-tech-stack.md` before anything else.** It pins:
+**Read `openspec/context/tech-stack.md` before anything else.** It pins:
 
 - `frontend.css` — the CSS framework (default Tailwind). Name your Figma
   variables/styles so they map 1:1 to this framework's token names.
@@ -55,9 +62,9 @@ sufficient here.
 
 ## Phase 1 — Read Context
 
-Read `docs/00-tech-stack.md`, `docs/01-market-analysis.md`,
-`docs/01b-product-spec.md`, `docs/01c-wedge.md`,
-`docs/03-system-design.md` in full, plus the requirements: `openspec/specs/**`
+Read `openspec/context/tech-stack.md`, `openspec/context/product-analysis.md`,
+`openspec/context/product.md`, `openspec/context/wedge.md`,
+`openspec/context/architecture.md` in full, plus the requirements: `openspec/specs/**`
 and the active change's deltas (`state/state.json` `.active_change` →
 `openspec/changes/<change>/specs/**`; conventions in
 `.claude/skills/build-product-v2/openspec-conventions.md`). If a
@@ -152,7 +159,7 @@ Using the write-capable Figma MCP tools:
    `tailwind-theme.config.ts` snippet) by reading back the Figma variables
    you created — derive the doc from Figma so the two cannot drift.
 
-## Phase 9 — Write companion spec `docs/03b-ux-design.md`
+## Phase 9 — Write companion spec `openspec/context/ux-design.md`
 
 This file is the repo-committed **companion** to the Figma deliverable —
 a pointer and machine-readable token/index, not a replacement. Sections:
@@ -167,7 +174,7 @@ a pointer and machine-readable token/index, not a replacement. Sections:
    `ui_kit` component it maps to.
 6. **User flow** (Mermaid).
 7. **Responsive strategy** (mobile → tablet → desktop).
-8. **Accessibility requirements**.
+8. **Accessibility approach** — how the design meets the `NFR-A11Y-*` requirements (cite the IDs; the requirements themselves live in the specs).
 9. **Build handoff** — `frontend-developer` pulls visuals from Figma via
    the **Dev Mode MCP** server (read-only) using the node IDs in §2;
    tokens come from §4. Figma remains the source of truth.
@@ -177,24 +184,24 @@ frames are the wireframes now.
 
 ## Phase 10 — Self-critique
 
-- [ ] Every screen in the product-spec / brief has a Figma frame (none missing)
+- [ ] Every user-facing story in the active change's `proposal.md` has a Figma frame (none missing)
 - [ ] Mobile **and** desktop variants exist for each screen (mobile-first)
 - [ ] Color styles pass WCAG AA contrast
 - [ ] Figma components map 1:1 to `contract.frontend.ui_kit`
-- [ ] `03b` records the file key + screen→node-ID index (build can target exact nodes)
+- [ ] `ux-design` records the file key + screen→node-ID index (build can target exact nodes)
 - [ ] Every user-facing `Priority: M` requirement is served by ≥ 1 screen in the index, and every screen lists ≥ 1 requirement ID
-- [ ] Tokens in `03b` were exported from the Figma variables (no drift between doc and file)
+- [ ] Tokens in `ux-design` were exported from the Figma variables (no drift between doc and file)
 - [ ] The home/landing frame makes the wedge legible within 5s of first paint (wedge rule)
 
 If any check fails, fix it in Figma and re-export before committing.
 
 ## Git Commit & Push
 
-The Figma file itself lives in Figma (not the repo); `03b` is the
+The Figma file itself lives in Figma (not the repo); `ux-design` is the
 committed pointer to it.
 
 ```
-git add docs/03b-ux-design.md
+git add openspec/context/ux-design.md
 git commit -m "feat: Figma UX deliverable (design system + screens) + companion spec"
 git push origin HEAD 2>/dev/null || git push --set-upstream origin HEAD 2>/dev/null || true
 ```

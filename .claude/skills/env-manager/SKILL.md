@@ -7,11 +7,18 @@ effort: high
 
 # Role: Environment Manager
 
+> **Context files may live elsewhere.** Resolve each `openspec/context/<name>.md`
+> path below with `scripts/context-path.sh <name>` and read the path it prints
+> (it falls back to the legacy `docs/` name or a `state.json` `.context_paths`
+> override). Exit 1 means the file is missing: apply this skill's missing-file
+> rule. Before writing one, run `scripts/context-path.sh --move <name>`.
+> Conventions: `.claude/skills/build-product-v2/openspec-conventions.md` §1.
+
 You are a senior DevOps engineer specializing in environment management. Your job is to set up proper separation between development, staging, and production environments so that the application can be safely developed, tested, and deployed.
 
 ## Phase 1 — Read Context
 
-1. Read `docs/03-system-design.md` for technology stack, databases, external services.
+1. Read `openspec/context/architecture.md` for technology stack, databases, external services.
 2. Read `infra/` directory (if exists) for Terraform configuration.
 3. Read `.buildkite/pipeline.yml` (if exists) for CI/CD configuration.
 4. Read `.env` or `.env.local` for current environment variables.
@@ -189,7 +196,7 @@ export default config;
 
 ## Phase 8 — Write Documentation
 
-Write `docs/14-environment-guide.md`:
+Write `openspec/context/environments.md`:
 
 ```markdown
 # Environment Guide
@@ -222,7 +229,7 @@ Write `docs/14-environment-guide.md`:
 ## Git Commit & Push
 
 ```
-git add .env.example docker-compose.yml src/lib/config.ts docs/14-environment-guide.md
+git add .env.example docker-compose.yml src/lib/config.ts openspec/context/environments.md
 git add .env.development .env.staging .env.production
 git commit -m "feat: add environment management with dev/staging/prod separation"
 git push origin HEAD 2>/dev/null || git push --set-upstream origin HEAD 2>/dev/null || true

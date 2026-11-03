@@ -1,11 +1,18 @@
 ---
 name: tech-stack-selector
-description: Tech Stack Selector — reads the wedge, scale tier, and stack constraints, then writes docs/00-tech-stack.md as the binding contract every downstream skill reads. Pins versions, picks vendors per scale tier, declares what is and is not in the stack.
+description: Tech Stack Selector — reads the wedge, scale tier, and stack constraints, then writes openspec/context/tech-stack.md as the binding contract every downstream skill reads. Pins versions, picks vendors per scale tier, declares what is and is not in the stack.
 allowed-tools: Read, Write, Edit, Bash
 effort: high
 ---
 
 # Role: Tech Stack Selector
+
+> **Context files may live elsewhere.** Resolve each `openspec/context/<name>.md`
+> path below with `scripts/context-path.sh <name>` and read the path it prints
+> (it falls back to the legacy `docs/` name or a `state.json` `.context_paths`
+> override). Exit 1 means the file is missing: apply this skill's missing-file
+> rule. Before writing one, run `scripts/context-path.sh --move <name>`.
+> Conventions: `.claude/skills/build-product-v2/openspec-conventions.md` §1.
 
 You are the project's tech-stack architect. You produce the single
 source of truth for technology choices that every downstream skill
@@ -13,7 +20,7 @@ source of truth for technology choices that every downstream skill
 deployer, observability, …) reads as a binding contract.
 
 Before this skill, the stack was implicit — every skill hardcoded its
-own vendors. From here on, **the contract in `docs/00-tech-stack.md`
+own vendors. From here on, **the contract in `openspec/context/tech-stack.md`
 wins**. Skills that need a tool not in the contract must add it via a
 follow-up `tech-stack-selector` run, not by reaching for their default.
 
@@ -22,21 +29,21 @@ follow-up `tech-stack-selector` run, not by reaching for their default.
 ## Inputs
 
 Required:
-- `docs/01c-wedge.md` — wedge axis, ICP, scale tier, stack constraints
+- `openspec/context/wedge.md` — wedge axis, ICP, scale tier, stack constraints
 
 Recommended:
-- `docs/01-market-analysis.md` — competitor stack signals
-- `docs/01b-product-spec.md` — feature surface that may force stack choices
+- `openspec/context/product-analysis.md` — competitor stack signals
+- `openspec/context/product.md` — personas, KPIs (if it exists; the feature surface is in the active change's `proposal.md`)
 - `state/state.json` — scale tier (canonical)
 
-If `docs/01c-wedge.md` does not exist, stop and emit:
+If `openspec/context/wedge.md` does not exist, stop and emit:
 > ERROR: run `differentiation` first. The stack depends on the wedge and scale tier.
 
 ---
 
 ## Phase 1 — Read the wedge constraints
 
-Parse `docs/01c-wedge.md` for the **Stack constraints** section
+Parse `openspec/context/wedge.md` for the **Stack constraints** section
 (produced by the updated `differentiation` skill). Expect flags like:
 
 - `realtime` — websockets, presence, CRDT
@@ -287,7 +294,7 @@ anything in `not_in_stack` without rerunning this skill.
 
 ---
 
-## Phase 5 — Output: `docs/00-tech-stack.md`
+## Phase 5 — Output: `openspec/context/tech-stack.md`
 
 ```markdown
 # Tech Stack Contract — <product name>
@@ -366,7 +373,7 @@ If any check fails, mark the doc `Status: DRAFT` and surface the gap.
 ## Git commit & push
 
 ```bash
-git add docs/00-tech-stack.md
+git add openspec/context/tech-stack.md
 git commit -m "feat: lock tech stack contract for $(jq -r .scale_tier state/state.json) tier"
 git push origin HEAD 2>/dev/null || git push --set-upstream origin HEAD 2>/dev/null || true
 ```

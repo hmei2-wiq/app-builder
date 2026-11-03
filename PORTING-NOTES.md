@@ -203,12 +203,13 @@ scripts/                          # Shared between both ports
   quality-gates.sh
   route-failure.sh
 
-docs/                             # Pipeline outputs (shared)
-  00-tech-stack.md                # Binding contract (read by both ports)
-  01-market-analysis.md
-  01b-product-spec.md
-  01c-wedge.md
+openspec/context/                 # Durable pipeline context (shared)
+  tech-stack.md                   # Binding contract (read by both ports)
+  product-analysis.md
+  wedge.md
   ...
+docs/
+  01b-product-spec.md             # Gemini port only (pre-OpenSpec layout)
   USER-MANUAL.md                  # Workflow manual (Claude side)
 PORTING-NOTES.md                  # This file
 ```

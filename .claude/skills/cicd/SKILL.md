@@ -1,14 +1,21 @@
 ---
 name: cicd
-description: CI/CD Engineer — generates a CI pipeline (Buildkite by default for cost effectiveness, GitHub Actions or GitLab CI as alternatives), Dockerfile, and build scripts. Reads docs/00-tech-stack.md for ci.provider and runtime versions.
+description: CI/CD Engineer — generates a CI pipeline (Buildkite by default for cost effectiveness, GitHub Actions or GitLab CI as alternatives), Dockerfile, and build scripts. Reads openspec/context/tech-stack.md for ci.provider and runtime versions.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 effort: high
 ---
 
 # Role: CI/CD Engineer
 
+> **Context files may live elsewhere.** Resolve each `openspec/context/<name>.md`
+> path below with `scripts/context-path.sh <name>` and read the path it prints
+> (it falls back to the legacy `docs/` name or a `state.json` `.context_paths`
+> override). Exit 1 means the file is missing: apply this skill's missing-file
+> rule. Before writing one, run `scripts/context-path.sh --move <name>`.
+> Conventions: `.claude/skills/build-product-v2/openspec-conventions.md` §1.
+
 You are a senior DevOps engineer. You set up a production-grade CI/CD
-pipeline driven by `docs/00-tech-stack.md`. The default provider is
+pipeline driven by `openspec/context/tech-stack.md`. The default provider is
 **Buildkite** because it is significantly cheaper than GitHub Actions
 hosted runners at this org's scale (BYO compute / self-hosted agents,
 predictable per-seat pricing), and the org already has
@@ -16,7 +23,7 @@ predictable per-seat pricing), and the org already has
 
 ## Phase 0 — Stack Contract (read first)
 
-**Read `docs/00-tech-stack.md` before anything else.** It pins:
+**Read `openspec/context/tech-stack.md` before anything else.** It pins:
 
 - `ci.provider` — one of `buildkite` (default), `github-actions`, `gitlab-ci`, `none`
 - `ci.registry` — image registry (`docker-hub` default, `gcr`, `ecr`, `ghcr`)
@@ -45,7 +52,7 @@ If `ci.provider: github-actions`, expect `GH_TOKEN` instead. If
 
 ## Phase 1 — Read Context
 
-1. Read `docs/00-tech-stack.md` (`ci.*`, `runtime.*`, `tooling.openspec`), `docs/03-system-design.md` (deployment topology), and the active change's `openspec/changes/<change>/tasks.md` (`[ops]` tasks; change name in `state/state.json` `.active_change`). Test/build commands come from `package.json` and `scripts/quality-gates.sh`.
+1. Read `openspec/context/tech-stack.md` (`ci.*`, `runtime.*`, `tooling.openspec`), `openspec/context/architecture.md` (deployment topology), and the active change's `openspec/changes/<change>/tasks.md` (`[ops]` tasks; change name in `state/state.json` `.active_change`). Test/build commands come from `package.json` and `scripts/quality-gates.sh`.
 2. Read `package.json` (or equivalent for the contract's runtime) for scripts and dependencies.
 3. Identify project root.
 
@@ -78,7 +85,7 @@ steps:
       - label: ":clipboard: Spec & Traceability"
         command: <pkg-mgr> ci && scripts/quality-gates.sh --only spec-validate,traceability
         env: { OPENSPEC_TELEMETRY: "0", DO_NOT_TRACK: "1", OPENSPEC_NO_UPDATE_CHECK: "1" }
-        artifact_paths: "docs/11-traceability.md;state/artifacts/traceability.json"
+        artifact_paths: "reports/traceability.md;state/artifacts/traceability.json"
 
   - wait: ~
 
@@ -109,7 +116,7 @@ steps:
 
 Substitute `<pkg-mgr>` with `contract.runtime.package_manager`.
 
-The Spec & Traceability step (present in every provider below) runs `openspec validate --all --strict` and `scripts/spec-coverage.sh` via the gate runner, so a PR blocks when a spec is invalid or a `Priority: M` requirement has no passing tagged test (see `.claude/skills/build-product-v2/openspec-conventions.md` §6). It runs after the test step so runner JSON reports exist; swap in the full `scripts/quality-gates.sh` if CI should run every gate.
+The Spec & Traceability step (present in every provider below) runs `openspec validate --all --strict` and `scripts/spec-coverage.sh` via the gate runner, so a PR blocks when a spec is invalid or a `Priority: M` requirement has no passing tagged test (see `.claude/skills/build-product-v2/openspec-conventions.md` §7). It runs after the test step so runner JSON reports exist; swap in the full `scripts/quality-gates.sh` if CI should run every gate.
 
 Create the pipeline via the Buildkite API:
 
@@ -227,6 +234,6 @@ Make executable: `chmod +x`.
 
 ```
 git add Dockerfile .dockerignore <ci-config-files>
-git commit -m "feat: add $(jq -r .ci.provider docs/00-tech-stack.md 2>/dev/null || echo 'ci') pipeline and Dockerfile"
+git commit -m "feat: add $(jq -r .ci.provider "$(scripts/context-path.sh tech-stack)" 2>/dev/null || echo 'ci') pipeline and Dockerfile"
 git push origin HEAD 2>/dev/null || git push --set-upstream origin HEAD 2>/dev/null || true
 ```

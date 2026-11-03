@@ -7,11 +7,18 @@ effort: high
 
 # Role: Senior Site Reliability Engineer
 
+> **Context files may live elsewhere.** Resolve each `openspec/context/<name>.md`
+> path below with `scripts/context-path.sh <name>` and read the path it prints
+> (it falls back to the legacy `docs/` name or a `state.json` `.context_paths`
+> override). Exit 1 means the file is missing: apply this skill's missing-file
+> rule. Before writing one, run `scripts/context-path.sh --move <name>`.
+> Conventions: `.claude/skills/build-product-v2/openspec-conventions.md` §1.
+
 You are a senior SRE. Your job is to instrument the application with structured logging, health checks, and monitoring so that production issues are detected before users report them.
 
 ## Phase 0 — Stack Contract (read first)
 
-**Read `docs/00-tech-stack.md` before anything else.** It pins:
+**Read `openspec/context/tech-stack.md` before anything else.** It pins:
 
 - `observability.logging` — structured logger (default `pino`)
 - `observability.error_tracking` — `sentry` / `cloud-monitoring` / `cloudwatch` / `console` (toy tier)
@@ -26,7 +33,7 @@ If the contract is missing, stop and emit:
 
 ## Phase 1 — Read Context
 
-1. Read `docs/00-tech-stack.md`, `docs/03-system-design.md`, and the `NFR-OBS-*`, `NFR-ALERT-*` and `NFR-AVL-*` requirements from `openspec/specs/**` (e.g. the `observability` / `availability` capabilities) plus the active change's deltas (`state/state.json` `.active_change`). Alert thresholds and SLOs come from those NFR scenarios; the numbers in this skill are fallbacks when no NFR exists. Conventions: `.claude/skills/build-product-v2/openspec-conventions.md`.
+1. Read `openspec/context/tech-stack.md`, `openspec/context/architecture.md`, and the `NFR-OBS-*`, `NFR-ALERT-*` and `NFR-AVL-*` requirements from `openspec/specs/**` (e.g. the `observability` / `availability` capabilities) plus the active change's deltas (`state/state.json` `.active_change`). Alert thresholds and SLOs come from those NFR scenarios; the numbers in this skill are fallbacks when no NFR exists. Conventions: `.claude/skills/build-product-v2/openspec-conventions.md`.
 2. Read the `infra/` directory (if exists) to confirm cloud provider matches `contract.cloud.provider`.
 3. Read the existing codebase to understand the middleware and API structure.
 
@@ -161,7 +168,7 @@ resource "aws_cloudwatch_dashboard" "app_dashboard" { ... }
 
 ## Phase 8 — Write Runbook
 
-Write `docs/11-observability.md`:
+Write `openspec/context/observability.md`:
 
 ```markdown
 # Observability & Monitoring
@@ -198,7 +205,7 @@ Write `docs/11-observability.md`:
 ## Git Commit & Push
 
 ```
-git add src/lib/logger.ts src/app/api/health/ docs/11-observability.md infra/modules/monitoring/
+git add src/lib/logger.ts src/app/api/health/ openspec/context/observability.md infra/modules/monitoring/
 git add -u
 git commit -m "feat: add observability — structured logging, health checks, monitoring"
 git push origin HEAD 2>/dev/null || git push --set-upstream origin HEAD 2>/dev/null || true

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # cogs-model.sh — unit-economics model for the PLG free→paid funnel.
 #
-# Gates the Phase 2 decision in docs/01e-shipworthy-strategy.md: is a free
+# Gates the Phase 2 decision in openspec/context/shipworthy-strategy.md: is a free
 # ideation+preview tier converting to $49/mo Launch actually viable, given that
 # you pay AI-inference + hosting COGS for EVERY free user but only a few percent
 # convert? This makes the assumption explicit and runs a sensitivity sweep.

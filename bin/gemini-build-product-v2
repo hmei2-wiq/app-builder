@@ -64,9 +64,9 @@ human_checkpoint() {
 # Read a value from state.json
 state_get() { jq -r ".$1 // \"\"" state/state.json; }
 
-# Read a value from docs/00-tech-stack.md (YAML in code fence)
+# Read a value from openspec/context/tech-stack.md (YAML in code fence)
 contract_get() {
-  yq "$1" docs/00-tech-stack.md 2>/dev/null || echo ""
+  yq "$1" openspec/context/tech-stack.md 2>/dev/null || echo ""
 }
 
 # ---------- Phase 0: Bootstrap ----------
@@ -111,30 +111,30 @@ run_phase_with_critic() {
 }
 
 # Phase 1 — ceo + ceo-critic
-run_phase_with_critic ceo ceo docs/01-market-analysis.md \
-  "Produce docs/01-market-analysis.md for: $IDEA"
+run_phase_with_critic ceo ceo openspec/context/product-analysis.md \
+  "Produce openspec/context/product-analysis.md for: $IDEA"
 
 # Phase 2 — differentiation + diff-critic
-run_phase_with_critic differentiation diff docs/01c-wedge.md \
-  "Read docs/01-market-analysis.md and produce docs/01c-wedge.md including the Phase 5b stack-constraints section."
+run_phase_with_critic differentiation diff openspec/context/wedge.md \
+  "Read openspec/context/product-analysis.md and produce openspec/context/wedge.md including the Phase 5b stack-constraints section."
 
 # Persist wedge fields
-WEDGE=$(grep -oP '(?<=^## 8\. One-Sentence Wedge Statement.*\n).*' docs/01c-wedge.md 2>/dev/null | head -1 || echo "")
-TIER=$(grep -oP '(?<=## Scale Tier:\s).*' docs/01c-wedge.md | head -1 || echo "preview")
+WEDGE=$(grep -oP '(?<=^## 8\. One-Sentence Wedge Statement.*\n).*' openspec/context/wedge.md 2>/dev/null | head -1 || echo "")
+TIER=$(grep -oP '(?<=## Scale Tier:\s).*' openspec/context/wedge.md | head -1 || echo "preview")
 scripts/state-set.sh '.wedge_sentence' "\"$WEDGE\""
 scripts/state-set.sh '.scale_tier' "\"$TIER\""
 
 # Phase 2.5 — Human checkpoint 1 (wedge + tier + constraints)
-SUMMARY=$(awk '/^## (Chosen Axis|Anti-axis|Stack constraints|One-Sentence Wedge|Scale Tier)/,/^## /' docs/01c-wedge.md | head -50)
+SUMMARY=$(awk '/^## (Chosen Axis|Anti-axis|Stack constraints|One-Sentence Wedge|Scale Tier)/,/^## /' openspec/context/wedge.md | head -50)
 if ! human_checkpoint "Wedge + Tier + Constraints" "$SUMMARY"; then
   warn "Looping back to differentiation"
-  run_phase_with_critic differentiation diff docs/01c-wedge.md \
-    "Revise docs/01c-wedge.md based on user feedback; ask the user inline if needed."
+  run_phase_with_critic differentiation diff openspec/context/wedge.md \
+    "Revise openspec/context/wedge.md based on user feedback; ask the user inline if needed."
 fi
 
 # Phase 2.7 — tech-stack-selector + stack-critic
-run_phase_with_critic tech-stack-selector stack docs/00-tech-stack.md \
-  "Read docs/01c-wedge.md and produce docs/00-tech-stack.md (the binding contract)."
+run_phase_with_critic tech-stack-selector stack openspec/context/tech-stack.md \
+  "Read openspec/context/wedge.md and produce openspec/context/tech-stack.md (the binding contract)."
 
 CI_PROVIDER=$(contract_get '.ci.provider')
 CLOUD=$(contract_get '.cloud.provider')
@@ -148,20 +148,20 @@ scripts/state-set.sh '.tech_stack.ai_heavy' "$([[ -n "$AI_HEAVY" ]] && echo true
 
 # Phase 3-6 — product-spec, analyst, designer, ux-designer (with critics)
 run_phase_with_critic product-spec spec docs/01b-product-spec.md \
-  "Read docs/00-tech-stack.md, docs/01-market-analysis.md, docs/01c-wedge.md and produce docs/01b-product-spec.md."
+  "Read openspec/context/tech-stack.md, openspec/context/product-analysis.md, openspec/context/wedge.md and produce docs/01b-product-spec.md."
 
-run_agent analyst "Read 00, 01, 01b, 01c and produce docs/02-system-requirements.md."
+run_agent analyst "Read openspec/context/tech-stack.md, openspec/context/product-analysis.md, docs/01b-product-spec.md, openspec/context/wedge.md and produce docs/02-system-requirements.md."
 
-run_phase_with_critic designer design docs/03-system-design.md \
-  "Read 00, 01b, 01c, 02 and produce docs/03-system-design.md. Do not re-pick vendors; the contract is binding."
+run_phase_with_critic designer design openspec/context/architecture.md \
+  "Read 00, 01b, 01c, 02 and produce openspec/context/architecture.md. Do not re-pick vendors; the contract is binding."
 
-run_phase_with_critic ux-designer ux docs/03b-ux-design.md \
-  "Read 00, 01b, 01c, 03 and produce docs/03b-ux-design.md. Use the browse extension to screenshot top 3 competitors first."
+run_phase_with_critic ux-designer ux openspec/context/ux-design.md \
+  "Read 00, 01b, 01c, 03 and produce openspec/context/ux-design.md. Use the browse extension to screenshot top 3 competitors first."
 
 # Phase 6.5 — Human checkpoint 2
-DESIGN_SUMMARY=$(head -80 docs/03b-ux-design.md)
+DESIGN_SUMMARY=$(head -80 openspec/context/ux-design.md)
 if ! human_checkpoint "Design target" "$DESIGN_SUMMARY"; then
-  run_agent ux-designer "Revise docs/03b-ux-design.md based on user feedback."
+  run_agent ux-designer "Revise openspec/context/ux-design.md based on user feedback."
 fi
 
 # Phase 6.7 — auth-engineer
@@ -182,7 +182,7 @@ fi
 # Phase 7 — Implementation fan-out
 # Gemini does NOT guarantee parallel subagent execution. We run sequentially.
 log "Phase 7 — Implementation (sequential; Gemini lacks reliable parallel subagents)"
-run_agent backend-developer "Implement backend per the dev plan, reading docs/00-tech-stack.md as the contract."
+run_agent backend-developer "Implement backend per the dev plan, reading openspec/context/tech-stack.md as the contract."
 run_agent frontend-developer "Implement frontend per the dev plan."
 run_agent db-migrator "Generate migrations + seed data."
 
@@ -230,12 +230,12 @@ if [[ "$TIER" == "launch" || "$TIER" == "scale" ]]; then
 fi
 
 # Phase 12 — pricing + positioning
-run_agent pricing "Produce docs/16-pricing.md."
-run_agent positioning "Produce docs/17-positioning.md (reads pricing)."
+run_agent pricing "Produce openspec/context/pricing.md."
+run_agent positioning "Produce openspec/context/positioning.md (reads pricing)."
 
 # Phase 12.5 — Human checkpoint 3
-HEADLINE=$(grep -A1 'Headline:' docs/17-positioning.md 2>/dev/null | head -3)
-TIERS=$(grep -A2 '^## Tiers' docs/16-pricing.md 2>/dev/null | head -10)
+HEADLINE=$(grep -A1 'Headline:' openspec/context/positioning.md 2>/dev/null | head -3)
+TIERS=$(grep -A2 '^## Tiers' openspec/context/pricing.md 2>/dev/null | head -10)
 if ! human_checkpoint "Pricing + Positioning" "$TIERS\n\n$HEADLINE"; then
   run_agent positioning "Revise headline + value prop."
 fi
